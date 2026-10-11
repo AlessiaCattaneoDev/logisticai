@@ -17,7 +17,7 @@ npm run build
 ## Stack
 React 19 · Vite · Tailwind CSS v4 (`@tailwindcss/vite`, config in `src/index.css`) · react-router · TanStack Query · **Recharts** (tutti i grafici) · **TanStack Table** (tutte le tabelle) · react-markdown + remark-gfm · lucide-react.
 
-Le versioni installate sono recenti (react-router 8, TanStack Table 9, Recharts 3, Vite 8): prima di usare un'API controlla i tipi in `node_modules` invece di andare a memoria.
+Le versioni installate sono recenti (react-router 8, Recharts 3, Vite 8): prima di usare un'API controlla i tipi in `node_modules` invece di andare a memoria. TanStack Table è fissato alla **v8** (`useReactTable`): la v9 ha un'API nuova e ancora poco documentata.
 
 ## Struttura
 ```
@@ -26,8 +26,9 @@ src/
 ├── api/             ← client HTTP (credentials: 'include') + parser SSE (fetch + ReadableStream)
 ├── auth/            ← contesto utente, ProtectedRoute per ruolo
 ├── pages/           ← LoginPage, ChatPage, admin/*
+├── chat/            ← state.ts (reducer puro della chat) e useChat.ts (stream SSE, cache, retry, feedback)
 ├── components/
-│   ├── chat/        ← ChatWindow, MessageBubble, LiveStatus, FeedbackButtons, Composer…
+│   ├── chat/        ← AssistantMessage, TrackingTimeline (stati live), FeedbackButtons, Composer, ConversationSidebar, SuggestedQuestions
 │   ├── artifacts/   ← ArtifactRenderer, DataChart, DataTable, format.ts
 │   └── admin/
 └── test/setup.ts    ← jest-dom + cleanup
@@ -39,8 +40,10 @@ src/
 - Il JWT sta in un cookie httpOnly: il front end non legge né salva token. Tutte le fetch usano `credentials: 'include'`.
 - Testi dell'interfaccia in italiano. Accessibilità: ruoli e label corretti (servono anche ai test).
 - Tailwind per lo stile; niente CSS custom se non nei token del tema in `index.css`.
+- Direzione visiva "documento di trasporto": carta su cemento, blu container (`container`), giallo segnaletica (`segnale`) SOLO per ciò che è in corso o è una soglia. Font Archivo (UI) e IBM Plex Mono solo per codice. Niente maiuscolo per le etichette, niente frecce nei bottoni, niente trattino lungo.
+- Gli stati live sono la `TrackingTimeline` (stile tracking spedizione): è l'unico elemento "audace", il resto resta sobrio.
 
 ## Test
 - Vitest + Testing Library + jest-dom, file `*.test.tsx` accanto al componente.
 - Cerca gli elementi per ruolo/label (`getByRole`), non per classi CSS.
-- API simulate con MSW negli integration test delle pagine. Recharts in jsdom: verifica la presenza di titolo, legenda e controlli, non i pixel.
+- API simulate con MSW (`src/test/msw.ts`, con `sseResponse()` per lo stream della chat) negli integration test delle pagine. Recharts in jsdom: verifica titolo, legenda e controlli, non i pixel (passa `initialDimension`).

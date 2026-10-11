@@ -44,3 +44,17 @@ describe('formatValue', () => {
     expect(formatValue(1234.5)).toBe('1.234,5');
   });
 });
+
+describe('formatCategory', () => {
+  it('mesi in forma breve, date complete e testo invariato', async () => {
+    const { formatCategory, isMonthlySeries } = await import('./format');
+    expect(formatCategory('2026-09')).toBe('set 2026');
+    expect(formatCategory('2026-09-01')).toBe('01/09/2026');
+    expect(formatCategory('2026-09-01', true)).toBe('set 2026');
+    expect(isMonthlySeries(['2026-08-01', '2026-09-01'])).toBe(true);
+    expect(isMonthlySeries(['2026-09-01', '2026-09-08'])).toBe(false);
+    expect(formatCategory('2026-09-14')).toBe('14/09/2026');
+    expect(formatCategory('HUB-VR')).toBe('HUB-VR');
+    expect(formatCategory(null)).toBe('');
+  });
+});

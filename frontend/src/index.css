@@ -1,2 +1,49 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+
+/* Direzione visiva "documento di trasporto": carta su cemento, blu container, giallo segnaletica
+   solo per ciò che è vivo o è una soglia. */
+@theme {
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --color-cemento: #eef0f2;
+  --color-carta: #ffffff;
+  --color-inchiostro: #1b2430;
+  --color-ardesia: #5b6676;
+  --color-bordo: #d5dae1;
+  --color-container: #1f4e8c;
+  --color-container-scuro: #173b6b;
+  --color-container-chiaro: #e7eef7;
+  --color-segnale: #e9b10c;
+  --color-segnale-chiaro: #fdf4d8;
+  --color-esito-ok: #2e7d4f;
+  --color-esito-ko: #c2362b;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-inchiostro);
+    background: var(--color-cemento);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-stretch: 87.5%;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-container);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

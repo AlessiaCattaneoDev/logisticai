@@ -47,3 +47,19 @@ export function formatValue(value: Cell, format?: ValueFormat): string {
       return formatters.number.format(value);
   }
 }
+
+const MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+
+/** Etichetta compatta per l'asse X: "2026-09" diventa "set 2026"; con `monthly` anche "2026-09-01". */
+export function formatCategory(value: string | number | null | undefined, monthly = false): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'number') return formatValue(value);
+  const month = (monthly ? /^(\d{4})-(\d{2})(?:-01)?$/ : /^(\d{4})-(\d{2})$/).exec(value);
+  if (month) return `${MESI[Number(month[2]) - 1]} ${month[1]}`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return formatValue(value, 'date');
+  return value;
+}
+
+/** Vero se tutte le categorie sono il primo giorno di un mese (serie mensile). */
+export const isMonthlySeries = (values: unknown[]) =>
+  values.length > 0 && values.every((v) => typeof v === 'string' && /^\d{4}-\d{2}(-01)?$/.test(v));

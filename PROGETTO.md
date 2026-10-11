@@ -1073,7 +1073,7 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | **6. Livello LLM** ✅ | Interfacce `LLMProvider` / `EmbeddingProvider`, adapter OpenAI + Anthropic, test di conformità, telemetria `LlmCall` + calcolo costi | Cambio provider da `.env` |
 | **7. RAG** ✅ | Avvio Chroma, `ingest.ts`, `retriever.ts`, controllo del modello di embedding, test di retrieval sulle domande 1–4 | Collection popolata |
 | **8. Orchestratore** ✅ | Tool, system prompt, loop ReAct, stream SSE, persistenza delle conversazioni | Catena della domanda 9 funzionante (testata con LLM finto) |
-| **9. Front end - chat** | Vite + TS + Tailwind, login, sidebar conversazioni, chat con stati live, grafici, badge, fonti, codice, feedback | Chat usabile |
+| **9. Front end - chat** ✅ | Vite + TS + Tailwind, login, sidebar conversazioni, chat con stati live, grafici, badge, fonti, codice, feedback | Chat usabile |
 | **10. Front end - admin** | API admin + pagine Panoramica, Conversazioni, Feedback, Costi, Utenti, Sistema | Dashboard usabile |
 | **11. Test e tuning** | Eseguire le 19 domande demo, correggere il routing, gestione errori, prova del cambio provider | Log dei test |
 | **12. README** | Installazione dei 3 ambienti + Chroma + DB, seed, ordine di avvio, credenziali demo, troubleshooting | README completo |

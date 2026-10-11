@@ -41,6 +41,7 @@ const envSchema = z
     LLM_MODEL: requiredString,
     LLM_REGION: optionalString,
     LLM_BASE_URL: optionalString,
+    LLM_REASONING_EFFORT: z.preprocess((v) => (v === '' ? undefined : v), z.enum(['low', 'medium', 'high']).optional()),
     EMBEDDING_PROVIDER: provider.default('openai'),
     EMBEDDING_MODEL: requiredString,
     OPENAI_API_KEY: optionalString,
@@ -76,7 +77,7 @@ export interface AppConfig {
   databaseUrl: string;
   jwt: { secret: string; expiresIn: string };
   internalServiceSecret: string;
-  llm: { provider: LlmProviderId; model: string; region?: string; baseUrl?: string };
+  llm: { provider: LlmProviderId; model: string; region?: string; baseUrl?: string; reasoningEffort?: 'low' | 'medium' | 'high' };
   embedding: { provider: LlmProviderId; model: string };
   credentials: Partial<Record<string, string>>;
   costs: { usdEurRate: number; dailyBudgetEur: number; monthlyBudgetEur: number };
@@ -98,7 +99,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     databaseUrl: e.DATABASE_URL,
     jwt: { secret: e.JWT_SECRET, expiresIn: e.JWT_EXPIRES_IN },
     internalServiceSecret: e.INTERNAL_SERVICE_SECRET,
-    llm: { provider: e.LLM_PROVIDER, model: e.LLM_MODEL, region: e.LLM_REGION, baseUrl: e.LLM_BASE_URL },
+    llm: { provider: e.LLM_PROVIDER, model: e.LLM_MODEL, region: e.LLM_REGION, baseUrl: e.LLM_BASE_URL, reasoningEffort: e.LLM_REASONING_EFFORT },
     embedding: { provider: e.EMBEDDING_PROVIDER, model: e.EMBEDDING_MODEL },
     credentials: {
       OPENAI_API_KEY: e.OPENAI_API_KEY,

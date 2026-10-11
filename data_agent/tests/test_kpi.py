@@ -110,3 +110,41 @@ def test_puntualita_pulita_vicina_alla_verita(cleaned, truth_df):
     a = calcola_puntualita(df, NON_IMPUTABILI, "cliente").set_index("cliente")["puntualita"]
     b = calcola_puntualita(truth, NON_IMPUTABILI, "cliente").set_index("cliente")["puntualita"]
     assert ((a - b).abs() < 0.005).all()
+
+
+# --- Helper "a prova di penale": verificati contro il dataset reale --------------------------
+
+from kpi import valuta_subvettori, verifica_sla_mensile  # noqa: E402
+
+REGOLE_MODANOVA = dict(soglia=0.95, penale_per_punto=1000, tetto=5000, volume_minimo=50, cause_escluse=NON_IMPUTABILI)
+
+
+@pytest.mark.parametrize("mese,penale", [("2026-07", 0.0), ("2026-08", 1500.0), ("2026-09", 1700.0)])
+def test_verifica_sla_mensile_modanova(cleaned, mese, penale):
+    d, _ = cleaned
+    r = verifica_sla_mensile(d, "ModaNova", mese, **REGOLE_MODANOVA)
+    assert r["penale_eur"] == penale
+    assert r["mese"] == mese and r["spedizioni"] >= 50
+
+
+def test_verifica_sla_settembre_dettaglio(cleaned):
+    d, _ = cleaned
+    r = verifica_sla_mensile(d, "ModaNova", "2026-09", **REGOLE_MODANOVA)
+    assert r["puntualita"] == pytest.approx(0.9327, abs=0.003)
+    assert r["punti_sotto_soglia"] == 1.7
+
+
+def test_verifica_sla_mese_senza_dati(cleaned):
+    d, _ = cleaned
+    with pytest.raises(ValueError, match="nessuna spedizione"):
+        verifica_sla_mensile(d, "ModaNova", "2030-01", **REGOLE_MODANOVA)
+
+
+def test_valuta_subvettori_2026(cleaned):
+    d, _ = cleaned
+    r = valuta_subvettori(d, soglia_piano=0.01, soglia_sospensione=0.02, mesi_consecutivi=2, da_mese="2026-01", a_mese="2026-09").set_index("vettore")
+    assert r.loc["VLX", "esito"] == "sospensione"
+    assert r.loc["VLX", "mesi_consecutivi_sopra_sospensione"] >= 2
+    assert r.loc["PAD", "esito"] == "conforme"
+    assert (r.drop("VLX")["esito"] != "sospensione").all()
+    assert r.index[0] == "VLX"  # i casi più gravi in cima

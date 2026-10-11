@@ -115,3 +115,34 @@ def test_output_valido_per_lo_schema_condiviso(reg, mensile):
     reg.crea_tabella(mensile, "t2")
     for payload in reg.as_json():
         TypeAdapter(Artifact).validate_python(payload)
+
+
+def test_stesso_titolo_sostituisce_il_precedente(reg, mensile):
+    reg.crea_grafico(mensile, "line", x="mese", y="puntualita", titolo="Puntualità")
+    reg.crea_grafico(mensile, "bar", x="mese", y="puntualita", titolo="Puntualità")
+    assert len(reg.artifacts) == 1
+    assert reg.artifacts[0].type == "bar"
+
+
+def test_tetto_al_numero_di_artifact(reg, mensile):
+    from artifacts import MAX_ARTIFACTS
+
+    for i in range(MAX_ARTIFACTS):
+        reg.crea_tabella(mensile, f"t{i}")
+    with pytest.raises(ValueError, match="sintesi"):
+        reg.crea_tabella(mensile, "una di troppo")
+
+
+def test_gruppo_trasforma_dati_lunghi_in_serie(reg):
+    lungo = pd.DataFrame({
+        "mese_previsto": ["2026-08", "2026-08", "2026-09", "2026-09"],
+        "hub_partenza": ["HUB-PC", "HUB-VR", "HUB-PC", "HUB-VR"],
+        "puntualita": [0.97, 0.95, 0.96, np.nan],
+    })
+    reg.crea_grafico(lungo, "line", x="mese_previsto", y="puntualita", titolo="Per hub", gruppo="hub_partenza", formato_y="percent")
+    spec = reg.artifacts[0]
+    assert [s.key for s in spec.series] == ["HUB-PC", "HUB-VR"]
+    assert spec.data == [
+        {"mese_previsto": "2026-08", "HUB-PC": 0.97, "HUB-VR": 0.95},
+        {"mese_previsto": "2026-09", "HUB-PC": 0.96, "HUB-VR": None},
+    ]

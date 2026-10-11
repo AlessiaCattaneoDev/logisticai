@@ -99,3 +99,46 @@ def test_prefix_senza_graffe_doppie():
 
     assert "{{" not in PREFIX and "}}" not in PREFIX
     assert "matplotlib" in PREFIX  # il divieto è esplicito
+
+
+def test_prefix_documenta_le_colonne_degli_helper():
+    """Senza i nomi delle colonne l'agente indicizza per posizione e sbaglia serie (bug visto dal vivo)."""
+    from agent import PREFIX
+
+    for col in ["tasso_danni", "consegnate", "puntualita", "margine_pct", "penale_eur"]:
+        assert col in PREFIX
+    assert "mai la posizione" in PREFIX
+
+
+def test_prefix_spiega_il_periodo_dei_dati():
+    """Dal vivo "ultimi 12 mesi" era stato interpretato come i primi 12 mesi dello storico."""
+    from agent import PREFIX
+
+    assert "ultimi 12 mesi = da 2025-10 a 2026-09" in PREFIX
+
+
+def test_repl_restituisce_tutte_le_print():
+    """Regressione: con PythonAstREPLTool solo l'ultima istruzione veniva catturata."""
+    from agent import CapturingPythonREPLTool
+
+    tool = CapturingPythonREPLTool(locals={})
+    out = tool.run("x = 41\nprint('penale_eur', 1700.0)\nprint('puntualita', 0.9327)\nx + 1")
+    assert "penale_eur 1700.0" in out
+    assert "puntualita 0.9327" in out
+    assert out.endswith("42")
+
+
+def test_repl_errori_leggibili_e_output_non_trapelato(capsys):
+    from agent import CapturingPythonREPLTool
+
+    tool = CapturingPythonREPLTool(locals={})
+    assert tool.run("print('prima')\n1/0").startswith("prima") or "ZeroDivisionError" in tool.run("1/0")
+    assert "(nessun output" in tool.run("y = 2")
+    assert capsys.readouterr().out == ""
+
+
+def test_l_agente_non_disperde_output_sul_processo(raw_df, capsys):
+    """Tutte le print dell'agente devono tornare all'agente, non finire nel log del server."""
+    analyst = make([run_code("print('a')\nprint('b')\nz = 1"), final("ok")], raw_df)
+    analyst.analyze("q", genera_grafico=False)
+    assert "a\nb" not in capsys.readouterr().out

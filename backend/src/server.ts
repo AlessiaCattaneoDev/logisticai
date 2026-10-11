@@ -39,6 +39,7 @@ try {
   const orchestrator = new Orchestrator({
     llm: createLLMProvider(config),
     model: config.llm.model,
+    reasoningEffort: config.llm.reasoningEffort,
     systemPrompt: buildSystemPrompt(deriveClienti(resolve(ROOT, 'knowledge_base/source'))),
     retriever: new Retriever(embedder, store, { maxDistance: config.chroma.maxDistance }),
     dataAgent,
@@ -55,7 +56,7 @@ try {
       secureCookies: config.production,
       loginRateLimit: { windowMs: 60_000, limit: 5 },
     },
-    chat: { service: new ChatService(prisma, orchestrator, recorder) },
+    chat: { service: new ChatService(prisma, orchestrator, recorder, 20, logger) },
   });
   app.listen(config.port, () => {
     logger.info(`Backend in ascolto su http://localhost:${config.port} (LLM ${config.llm.provider}:${config.llm.model})`);

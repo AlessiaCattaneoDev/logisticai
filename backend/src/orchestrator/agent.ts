@@ -44,6 +44,7 @@ export interface OrchestratorDeps {
   retriever: { search(query: string, opts: { cliente?: string; topK?: number }): Promise<RetrievalResult> };
   dataAgent: { analyze(input: AnalyzeInput, ctx: { userId: string; requestId?: string; signal?: AbortSignal }): Promise<AnalyzeOutput> };
   maxIterations?: number;
+  reasoningEffort?: 'low' | 'medium' | 'high';
 }
 
 export interface RunInput {
@@ -82,6 +83,7 @@ export class Orchestrator {
         system: this.deps.systemPrompt,
         messages,
         tools: TOOL_DEFINITIONS,
+        reasoningEffort: this.deps.reasoningEffort,
         signal: input.signal,
       })) {
         if (ev.type === 'text_delta') yield { event: 'delta', data: { text: ev.text } };
@@ -111,8 +113,15 @@ export class Orchestrator {
       for (const call of result.toolCalls) {
         yield { event: 'tool_start', data: { tool: call.name as ToolName, args: call.args } };
       }
-      // Le chiamate di uno stesso passaggio sono indipendenti: si eseguono in parallelo.
-      const executions = await Promise.all(result.toolCalls.map((call) => this.execute(call, input, requestId, outcome)));
+      // Catena garantita: se nello stesso passaggio il modello chiede sia le regole sia l'analisi,
+      // l'analisi viene rinviata finché non ha letto le regole (altrimenti calcolerebbe senza esclusioni).
+      const needsRulesFirst = result.toolCalls.some((c) => c.name === 'cerca_knowledge_base');
+      // Le altre chiamate di uno stesso passaggio sono indipendenti: si eseguono in parallelo.
+      const executions = await Promise.all(
+        result.toolCalls.map((call) =>
+          needsRulesFirst && call.name === 'analizza_dati' ? Promise.resolve(this.defer(call)) : this.execute(call, input, requestId, outcome),
+        ),
+      );
       for (const exec of executions) {
         yield* exec.events;
         messages.push(exec.message);
@@ -122,6 +131,17 @@ export class Orchestrator {
     }
     outcome.reply = texts.join('\n\n');
     return outcome;
+  }
+
+  private defer(call: ToolCallRequest): ToolExecution {
+    const content =
+      'Analisi rinviata: prima leggi i risultati di cerca_knowledge_base, poi richiama analizza_dati ' +
+      'riportando in regole_da_applicare i valori concreti trovati (soglie, formule, esclusioni, tetti).';
+    return {
+      message: { role: 'tool', toolCallId: call.id, name: call.name, content, isError: true },
+      log: { tool: 'analizza_dati', args: call.args, resultSummary: 'rinviata in attesa delle regole', durationMs: 0, ok: false, error: 'rinviata' },
+      events: [{ event: 'tool_end', data: { tool: 'analizza_dati', durationMs: 0, ok: false } }],
+    };
   }
 
   private async execute(call: ToolCallRequest, input: RunInput, requestId: string, outcome: OrchestratorOutcome): Promise<ToolExecution> {

@@ -103,3 +103,13 @@ def test_llm_creato_solo_alla_prima_analisi():
     assert created == []
     client.post("/analyze", headers=auth_header(), json={"domanda": "x"})
     assert created == ["fake:fake-model"]
+
+
+def test_factory_reale_senza_temperature(monkeypatch):
+    """I modelli di ragionamento rifiutano temperature != default: la factory non deve impostarla."""
+    import main
+
+    captured = {}
+    monkeypatch.setattr("langchain.chat_models.init_chat_model", lambda model, **kw: captured.update(model=model, **kw))
+    main.default_llm_factory(settings(llm_provider="openai", llm_model="gpt-5.4-mini"))
+    assert captured == {"model": "openai:gpt-5.4-mini"}

@@ -25,7 +25,8 @@ LlmFactory = Callable[[Settings], Any]
 def default_llm_factory(settings: Settings) -> Any:
     from langchain.chat_models import init_chat_model
 
-    return init_chat_model(settings.model_id, temperature=0)
+    # Niente temperature: i modelli di ragionamento (es. GPT-5) accettano solo il valore di default.
+    return init_chat_model(settings.model_id)
 
 
 class AnalyzeRequest(BaseModel):

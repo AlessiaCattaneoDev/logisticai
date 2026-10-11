@@ -5,6 +5,7 @@ import OpenAI from 'openai';
 import { describe, expect, it } from 'vitest';
 import { AnthropicAdapter, type AnthropicLike } from '../adapters/anthropic';
 import { OpenAIAdapter, type OpenAILike } from '../adapters/openai';
+import { OpenAIResponsesAdapter, type OpenAIResponsesLike } from '../adapters/openaiResponses';
 import { LLMError, type LLMProvider, type LLMRequest, type LLMStreamEvent } from '../types';
 
 interface Scenario {
@@ -92,6 +93,32 @@ const openaiHarness: Harness = {
   },
 };
 
+const responsesHarness: Harness = {
+  name: 'openai',
+  make(s) {
+    let params: unknown;
+    const client: OpenAIResponsesLike = {
+      responses: {
+        create: (async (p: unknown) => {
+          params = p;
+          if ('error' in s) throw new OpenAI.APIError(s.error, {}, `errore ${s.error}`, new Headers());
+          const output = [
+            { type: 'reasoning', id: 'rs_1', summary: [], encrypted_content: 'cifrato' },
+            ...(s.text ? [{ type: 'message', id: 'msg_1', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text: s.text, annotations: [] }] }] : []),
+            ...s.toolCalls.map((c) => ({ type: 'function_call', id: `fc_${c.id}`, call_id: c.id, name: c.name, arguments: JSON.stringify(c.args), status: 'completed' })),
+          ];
+          const events: unknown[] = words(s.text).map((w) => ({ type: 'response.output_text.delta', delta: w }));
+          const usage = { input_tokens: s.usage.input + s.usage.cached, output_tokens: s.usage.output, input_tokens_details: { cached_tokens: s.usage.cached } };
+          const response = { model: 'gpt-test', output, usage, incomplete_details: s.stop === 'max_tokens' ? { reason: 'max_output_tokens' } : null };
+          events.push({ type: s.stop === 'max_tokens' ? 'response.incomplete' : 'response.completed', response });
+          return { async *[Symbol.asyncIterator]() { yield* events; } };
+        }) as unknown as OpenAIResponsesLike['responses']['create'],
+      },
+    };
+    return { provider: new OpenAIResponsesAdapter({ client }), sent: () => params };
+  },
+};
+
 const request: LLMRequest = {
   model: 'test-model',
   system: 'Sei il copilota di Padana Logistics.',
@@ -109,7 +136,7 @@ async function run(provider: LLMProvider) {
   return { deltas, result: done! };
 }
 
-describe.each([anthropicHarness, openaiHarness])('conformità adapter: $name', (h) => {
+describe.each([anthropicHarness, openaiHarness, responsesHarness])('conformità adapter: $name', (h) => {
   it('risposta di solo testo', async () => {
     const { provider } = h.make({ text: 'Ciao Sara, come posso aiutarti?', toolCalls: [], stop: 'end', usage: { input: 90, cached: 10, output: 7 } });
     const { deltas, result } = await run(provider);
@@ -206,6 +233,12 @@ describe('traduzione richieste: anthropic', () => {
     expect(result.providerState).toMatchObject({ provider: 'anthropic' });
   });
 
+  it('reasoningEffort -> output_config.effort', async () => {
+    const { provider, sent } = anthropicHarness.make({ text: 'ok', toolCalls: [], stop: 'end', usage: { input: 1, cached: 0, output: 1 } });
+    await provider.chat({ ...request, reasoningEffort: 'medium' });
+    expect((sent() as Record<string, unknown>).output_config).toEqual({ effort: 'medium' });
+  });
+
   it('fallback server-side solo se abilitati', async () => {
     let params: any;
     const client = { beta: { messages: { stream: (p: any) => { params = p; throw new Anthropic.APIError(400, {}, 'x', new Headers()); } } } } as unknown as AnthropicLike;
@@ -233,6 +266,15 @@ describe('traduzione richieste: openai', () => {
     expect(p.stream_options).toEqual({ include_usage: true });
   });
 
+  it('reasoningEffort -> reasoning_effort, omesso se non indicato', async () => {
+    const a = openaiHarness.make({ text: 'ok', toolCalls: [], stop: 'end', usage: { input: 1, cached: 0, output: 1 } });
+    await a.provider.chat({ ...request, reasoningEffort: 'high' });
+    expect((a.sent() as Record<string, unknown>).reasoning_effort).toBe('high');
+    const b = openaiHarness.make({ text: 'ok', toolCalls: [], stop: 'end', usage: { input: 1, cached: 0, output: 1 } });
+    await b.provider.chat(request);
+    expect(b.sent()).not.toHaveProperty('reasoning_effort');
+  });
+
   it('argomenti JSON malformati -> argsError invece di eccezione', async () => {
     const client: OpenAILike = {
       chat: { completions: { create: (async () => ({
@@ -244,5 +286,48 @@ describe('traduzione richieste: openai', () => {
     };
     const result = await new OpenAIAdapter({ client }).chat(request);
     expect(result.toolCalls[0]).toMatchObject({ name: 'analizza_dati', args: {}, argsError: 'argomenti JSON non validi' });
+  });
+});
+
+describe('traduzione richieste: openai responses', () => {
+  it('istruzioni, strumenti, store=false e ragionamento cifrato solo se richiesto', async () => {
+    const a = responsesHarness.make({ text: 'ok', toolCalls: [], stop: 'end', usage: { input: 1, cached: 0, output: 1 } });
+    await a.provider.chat({ ...request, reasoningEffort: 'medium' });
+    expect(a.sent()).toMatchObject({
+      instructions: request.system, store: false, reasoning: { effort: 'medium' }, include: ['reasoning.encrypted_content'],
+      tools: [{ type: 'function', name: 'cerca_knowledge_base' }],
+    });
+    const b = responsesHarness.make({ text: 'ok', toolCalls: [], stop: 'end', usage: { input: 1, cached: 0, output: 1 } });
+    await b.provider.chat(request);
+    expect(b.sent()).not.toHaveProperty('reasoning');
+  });
+
+  it('chiamate e risultati come function_call / function_call_output', async () => {
+    const { provider, sent } = responsesHarness.make({ text: 'ok', toolCalls: [], stop: 'end', usage: { input: 1, cached: 0, output: 1 } });
+    await provider.chat({
+      ...request,
+      messages: [
+        { role: 'user', content: 'q' },
+        { role: 'assistant', content: '', toolCalls: [{ id: 't1', name: 'cerca_knowledge_base', args: { query: 'SLA' } }] },
+        { role: 'tool', toolCallId: 't1', name: 'cerca_knowledge_base', content: 'risultato' },
+      ],
+    });
+    expect((sent() as { input: unknown[] }).input).toEqual([
+      { role: 'user', content: 'q' },
+      { type: 'function_call', call_id: 't1', name: 'cerca_knowledge_base', arguments: '{"query":"SLA"}' },
+      { type: 'function_call_output', call_id: 't1', output: 'risultato' },
+    ]);
+  });
+
+  it('l’output grezzo (ragionamento cifrato incluso) torna invariato nello stesso turno', async () => {
+    const first = responsesHarness.make({ text: '', toolCalls: [{ id: 'c1', name: 'cerca_knowledge_base', args: { query: 'x' } }], stop: 'tool_calls', usage: { input: 1, cached: 0, output: 1 } });
+    const r1 = await first.provider.chat(request);
+    const second = responsesHarness.make({ text: 'ok', toolCalls: [], stop: 'end', usage: { input: 1, cached: 0, output: 1 } });
+    await second.provider.chat({
+      ...request,
+      messages: [{ role: 'user', content: 'q' }, { role: 'assistant', content: r1.text, toolCalls: r1.toolCalls, providerState: r1.providerState }, { role: 'tool', toolCallId: 'c1', name: 'cerca_knowledge_base', content: 'r' }],
+    });
+    const input = (second.sent() as { input: { type?: string }[] }).input;
+    expect(input.map((i) => i.type ?? 'message')).toEqual(['message', 'reasoning', 'function_call', 'function_call_output']);
   });
 });

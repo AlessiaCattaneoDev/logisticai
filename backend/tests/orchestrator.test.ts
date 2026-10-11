@@ -95,24 +95,37 @@ describe('Orchestrator', () => {
 
   it('registra le chiamate a modelli di orchestratore, embedding e data agent', async () => {
     const { orchestrator } = setup([
-      { toolCalls: [{ name: 'cerca_knowledge_base', args: { query: 'x y' } }, { name: 'analizza_dati', args: { domanda: 'tasso danni', genera_grafico: true } }] },
+      { toolCalls: [{ name: 'cerca_knowledge_base', args: { query: 'x y' } }] },
+      { toolCalls: [{ name: 'analizza_dati', args: { domanda: 'tasso danni', genera_grafico: true } }] },
       { text: 'fatto' },
     ]);
     const { outcome } = await drain(orchestrator.run(input));
-    expect(outcome.llmCalls.map((c) => c.component).sort()).toEqual(['data_agent', 'embedding', 'orchestrator', 'orchestrator']);
+    expect(outcome.llmCalls.map((c) => c.component).sort()).toEqual(['data_agent', 'embedding', 'orchestrator', 'orchestrator', 'orchestrator']);
     expect(outcome.llmCalls.find((c) => c.component === 'data_agent')).toMatchObject({ model: 'data-model', usage: { inputTokens: 900, outputTokens: 120 } });
   });
 
-  it('chiamate parallele nello stesso passaggio: entrambe eseguite, risultati collegati agli id', async () => {
+  it('regole e dati chiesti insieme: l’analisi è rinviata finché il modello non ha letto le regole', async () => {
     const { orchestrator, llm, searches, analyses } = setup([
-      { toolCalls: [{ name: 'cerca_knowledge_base', args: { query: 'soglia danni vettori' } }, { name: 'analizza_dati', args: { domanda: 'danni per vettore', genera_grafico: true } }] },
-      { text: 'VeloceExpress va sospeso.' },
+      { toolCalls: [{ name: 'cerca_knowledge_base', args: { query: 'SLA ModaNova' } }, { name: 'analizza_dati', args: { domanda: 'penale ModaNova settembre', genera_grafico: true } }] },
+      { toolCalls: [{ name: 'analizza_dati', args: { domanda: 'penale ModaNova settembre', genera_grafico: true, regole_da_applicare: 'Soglia 95%, escludere Destinatario assente' } }] },
+      { text: 'Penale di 1.700,00 €.' },
+    ]);
+    const { outcome } = await drain(orchestrator.run(input));
+    expect(searches).toHaveLength(1);
+    expect(analyses).toEqual([expect.objectContaining({ regole_da_applicare: 'Soglia 95%, escludere Destinatario assente' })]);
+    const deferred = llm.requests[1].messages.filter((m) => m.role === 'tool') as { toolCallId: string; content: string; isError: boolean }[];
+    expect(deferred.map((t) => t.toolCallId)).toEqual(['call_1_0', 'call_1_1']);
+    expect(deferred[1]).toMatchObject({ isError: true, content: expect.stringMatching(/rinviata/) });
+    expect(outcome.toolsUsed.map((t) => [t.name, t.ok])).toEqual([['cerca_knowledge_base', true], ['analizza_dati', false], ['analizza_dati', true]]);
+  });
+
+  it('chiamate parallele indipendenti (senza regole) eseguite insieme', async () => {
+    const { orchestrator, analyses } = setup([
+      { toolCalls: [{ name: 'analizza_dati', args: { domanda: 'danni per vettore', genera_grafico: true } }, { name: 'analizza_dati', args: { domanda: 'puntualità per hub', genera_grafico: true } }] },
+      { text: 'ok' },
     ]);
     await drain(orchestrator.run(input));
-    expect(searches).toHaveLength(1);
-    expect(analyses).toHaveLength(1);
-    const tools = llm.requests[1].messages.filter((m) => m.role === 'tool') as { toolCallId: string }[];
-    expect(tools.map((t) => t.toolCallId)).toEqual(['call_1_0', 'call_1_1']);
+    expect(analyses).toHaveLength(2);
   });
 
   it('argomenti non validi: errore restituito al modello, che può correggersi', async () => {
@@ -182,5 +195,16 @@ describe('Orchestrator', () => {
   it('errore del provider LLM: propagato al chiamante', async () => {
     const { orchestrator } = setup([{ error: new Error('provider giù') }]);
     await expect(drain(orchestrator.run(input))).rejects.toThrow('provider giù');
+  });
+});
+
+describe('system prompt', () => {
+  it('contiene le regole di routing e di ambito', () => {
+    const p = buildSystemPrompt(['ModaNova']);
+    expect(p).toMatch(/PRIMA cerca le regole, POI chiama analizza_dati/);
+    expect(p).toMatch(/NON rispondere nel merito/);
+    expect(p).toMatch(/numeri chiave/);
+    expect(p).toMatch(/Completa sempre la catena/);
+    expect(p).not.toContain(String.fromCharCode(0x2014));
   });
 });

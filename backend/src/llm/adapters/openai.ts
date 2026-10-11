@@ -84,6 +84,7 @@ export class OpenAIAdapter implements LLMProvider {
           messages: toOpenAIMessages(req.system, req.messages),
           ...(req.tools?.length ? { tools: toOpenAITools(req.tools) } : {}),
           max_completion_tokens: req.maxOutputTokens ?? this.options.defaultMaxOutputTokens ?? 16000,
+          ...(req.reasoningEffort ? { reasoning_effort: req.reasoningEffort } : {}),
           stream: true,
           stream_options: { include_usage: true },
         },

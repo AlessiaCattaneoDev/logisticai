@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { AnthropicAdapter } from '../adapters/anthropic';
 import { OpenAIAdapter } from '../adapters/openai';
+import { OpenAIResponsesAdapter } from '../adapters/openaiResponses';
 import { createLLMProvider } from '../factory';
 
 const credentials = { OPENAI_API_KEY: 'sk-test', ANTHROPIC_API_KEY: 'sk-ant-test' };
 
 describe('createLLMProvider', () => {
   it.each([
-    ['openai', OpenAIAdapter, 'openai'],
+    ['openai', OpenAIResponsesAdapter, 'openai'],
     ['anthropic', AnthropicAdapter, 'anthropic'],
     ['local', OpenAIAdapter, 'local'],
   ] as const)('%s', (provider, cls, id) => {

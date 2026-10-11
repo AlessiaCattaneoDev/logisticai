@@ -98,6 +98,7 @@ export class AnthropicAdapter implements LLMProvider {
           system: req.system,
           messages: toAnthropicMessages(req.messages),
           ...(req.tools?.length ? { tools: toAnthropicTools(req.tools) } : {}),
+          ...(req.reasoningEffort ? { output_config: { effort: req.reasoningEffort } } : {}),
           ...(this.options.serverFallbacks
             ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const }
             : {}),

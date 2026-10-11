@@ -16,6 +16,8 @@ from pydantic import ValidationError
 
 from specs import MAX_CHART_POINTS, MAX_TABLE_ROWS, ChartSpec, TableSpec
 
+MAX_ARTIFACTS = 4
+
 ALLOWED_TYPES = {
     "bar": ["bar", "line", "area"],
     "line": ["line", "bar", "area"],
@@ -84,6 +86,16 @@ class ArtifactRegistry:
     def __init__(self) -> None:
         self.artifacts: list[ChartSpec | TableSpec] = []
 
+    def _register(self, spec: ChartSpec | TableSpec) -> None:
+        # Stesso tipo e stesso titolo = correzione: sostituisce la versione precedente.
+        for i, existing in enumerate(self.artifacts):
+            if existing.kind == spec.kind and existing.title == spec.title:
+                self.artifacts[i] = spec
+                return
+        if len(self.artifacts) >= MAX_ARTIFACTS:
+            raise ValueError(f"hai già creato {MAX_ARTIFACTS} grafici/tabelle: non crearne altri, scrivi la sintesi")
+        self.artifacts.append(spec)
+
     def crea_grafico(
         self,
         df: pd.DataFrame,
@@ -101,9 +113,23 @@ class ArtifactRegistry:
         orizzontale: bool = False,
         linee_riferimento: list[dict] | None = None,
         tipi_serie: dict[str, str] | None = None,
+        gruppo: str | None = None,
     ) -> str:
-        """Registra un grafico. tipo: bar | line | area | pie | scatter | composed."""
+        """Registra un grafico. tipo: bar | line | area | pie | scatter | composed.
+
+        gruppo: colonna da trasformare in serie separate (dati "lunghi", es. una riga per mese e hub ->
+        una linea per hub). In questo caso y deve essere una sola colonna.
+        """
         ys = [y] if isinstance(y, str) else list(y)
+        if gruppo:
+            if len(ys) != 1:
+                raise ValueError("con gruppo indica una sola colonna y")
+            df = _with_columns(df, [x, ys[0], gruppo])
+            wide = df.pivot_table(index=x, columns=gruppo, values=ys[0], aggfunc="first").reset_index()
+            wide.columns = [str(c) for c in wide.columns]
+            labels = {str(v): str(v) for v in df[gruppo].dropna().unique()}
+            etichette = {**labels, **(etichette or {})}
+            df, ys = wide, [c for c in wide.columns if c != x]
         df = _with_columns(df, [x, *ys])
         if len(df) > MAX_CHART_POINTS:
             raise ValueError(
@@ -131,7 +157,7 @@ class ArtifactRegistry:
             )
         except ValidationError as err:
             raise _validation_error("grafico", err) from None
-        self.artifacts.append(spec)
+        self._register(spec)
         return f"Grafico registrato: '{titolo}' ({tipo}, {len(spec.data)} punti)"
 
     def crea_tabella(
@@ -173,7 +199,7 @@ class ArtifactRegistry:
             )
         except ValidationError as err:
             raise _validation_error("tabella", err) from None
-        self.artifacts.append(spec)
+        self._register(spec)
         return f"Tabella registrata: '{titolo}' ({len(spec.rows)} righe)"
 
     def riepilogo(self) -> list[str]:

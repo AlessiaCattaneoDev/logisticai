@@ -27,6 +27,7 @@ export class ChatService {
     private readonly orchestrator: Pick<Orchestrator, 'run'>,
     private readonly recorder: TelemetryRecorder,
     private readonly historyLimit = 20,
+    private readonly logger?: { error: (obj: object, msg: string) => void },
   ) {}
 
   /** Conversazione esistente dell'utente (404 se non sua) oppure nuova. Da chiamare prima di aprire lo stream. */
@@ -67,6 +68,7 @@ export class ChatService {
       }
     } catch (err) {
       const interrupted = input.signal?.aborted;
+      if (!interrupted) this.logger?.error({ err, conversationId: input.conversationId }, 'Risposta della chat non riuscita');
       await this.prisma.message.create({
         data: { conversationId: input.conversationId, role: 'ASSISTANT', content: interrupted ? 'Risposta interrotta.' : ERROR_REPLY, status: 'error', latencyMs: Math.round(performance.now() - started) },
       });

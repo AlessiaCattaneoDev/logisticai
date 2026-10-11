@@ -45,8 +45,10 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       'calcola KPI e crea grafici e tabelle mostrati direttamente all’utente. ' +
       'Usalo per puntualità, ritardi e motivi, danni, giacenze, volumi, costi, ricavi, margini, trend, classifiche, confronti. ' +
       'Esempi: "puntualità mensile per hub", "tasso di danni per vettore nel 2026", "margine per cliente". ' +
-      'Se il calcolo dipende da regole contrattuali (soglie, penali, esclusioni), PRIMA cercale con cerca_knowledge_base ' +
-      'e poi passale qui in regole_da_applicare. NON usarlo per domande su procedure o regole.',
+      'Se il calcolo dipende da regole contrattuali (penali, soglie SLA, esclusioni dal calcolo, soglie dei subvettori, tempi di resa): ' +
+      'PRIMA chiama cerca_knowledge_base in un passaggio separato, leggi il risultato, POI chiama questo strumento riportando ' +
+      'in regole_da_applicare i valori concreti trovati (mai frasi generiche come "se presenti"). ' +
+      'NON usarlo per domande su procedure o regole.',
     parameters: {
       type: 'object',
       properties: {
@@ -54,7 +56,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
         genera_grafico: { type: 'boolean', description: 'true se un grafico o una tabella aiutano la risposta.' },
         regole_da_applicare: {
           type: 'string',
-          description: 'Soglie, formule ed esclusioni lette nella knowledge base, da applicare al calcolo (es. "soglia 95%, penale 1.000 € per punto...").',
+          description:
+            'Valori concreti letti nella knowledge base, da applicare al calcolo. Es.: "Soglia 95%. Penale 1.000 € per punto sotto soglia, tetto 5.000 € al mese. Escludere dal calcolo: Meteo avverso, Destinatario assente, Indirizzo errato, spedizioni In transito. Penale non applicabile sotto 50 spedizioni nel mese."',
         },
       },
       required: ['domanda', 'genera_grafico'],

@@ -2,6 +2,7 @@ import type { AppConfig } from '../config.js';
 import { AnthropicAdapter } from './adapters/anthropic.js';
 import { OpenAIAdapter } from './adapters/openai.js';
 import { OpenAIEmbeddingAdapter } from './adapters/openaiEmbeddings.js';
+import { OpenAIResponsesAdapter } from './adapters/openaiResponses.js';
 import type { EmbeddingProvider, LLMProvider } from './types.js';
 
 /** Sceglie l'adapter in base al .env: cambiare provider = cambiare LLM_PROVIDER / LLM_MODEL. */
@@ -9,7 +10,8 @@ export function createLLMProvider(config: Pick<AppConfig, 'llm' | 'credentials'>
   const { provider, baseUrl } = config.llm;
   switch (provider) {
     case 'openai':
-      return new OpenAIAdapter({ apiKey: config.credentials.OPENAI_API_KEY, baseURL: baseUrl });
+      // Responses API: unica API OpenAI che combina ragionamento e strumenti.
+      return new OpenAIResponsesAdapter({ apiKey: config.credentials.OPENAI_API_KEY, baseURL: baseUrl });
     case 'local':
       return new OpenAIAdapter({ id: 'local', baseURL: baseUrl });
     case 'anthropic':

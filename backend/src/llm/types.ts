@@ -41,8 +41,12 @@ export interface LLMRequest {
   messages: NeutralMessage[];
   tools?: ToolDefinition[];
   maxOutputTokens?: number;
+  /** Profondità di ragionamento per i modelli che la supportano; omesso = default del modello. */
+  reasoningEffort?: ReasoningEffort;
   signal?: AbortSignal;
 }
+
+export type ReasoningEffort = 'low' | 'medium' | 'high';
 
 /** inputTokens = token di input NON in cache; cachedInputTokens = letti dalla cache (prezzo ridotto). */
 export interface LLMUsage {

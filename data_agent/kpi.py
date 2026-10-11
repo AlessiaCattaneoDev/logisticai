@@ -91,3 +91,76 @@ def margine(df: pd.DataFrame, raggruppa_per: str | list[str] | None = None) -> p
     out["margine_eur"] = out["ricavo_eur"] - out["costo_eur"]
     out["margine_pct"] = out["margine_eur"] / out["ricavo_eur"]
     return out
+
+
+def verifica_sla_mensile(
+    d: pd.DataFrame,
+    cliente: str,
+    mese: str,
+    soglia: float,
+    penale_per_punto: float,
+    tetto: float,
+    volume_minimo: int = 0,
+    cause_escluse: Iterable[str] = (),
+) -> dict:
+    """Verifica SLA di un cliente in un mese (AAAA-MM), misurato sulla data di consegna prevista.
+
+    Unico modo affidabile per calcolare una penale: filtro, esclusioni e formula sono sempre gli stessi.
+    """
+    righe = d[(d["cliente"] == cliente) & (d["mese_previsto"] == mese)]
+    if righe.empty:
+        raise ValueError(f"nessuna spedizione per {cliente} nel mese {mese}")
+    p = calcola_puntualita(righe, cause_escluse=cause_escluse).iloc[0]
+    penale = calcola_penale(float(p["puntualita"]), soglia, penale_per_punto, tetto, int(p["spedizioni"]), volume_minimo)
+    return {
+        "cliente": cliente,
+        "mese": mese,
+        "spedizioni": int(p["spedizioni"]),
+        "escluse": int(p["escluse"]),
+        "misurate": int(p["misurate"]),
+        "puntuali": int(p["puntuali"]),
+        "puntualita": round(float(p["puntualita"]), 4),
+        "soglia": soglia,
+        **penale,
+    }
+
+
+def valuta_subvettori(
+    d: pd.DataFrame,
+    soglia_piano: float,
+    soglia_sospensione: float,
+    mesi_consecutivi: int,
+    da_mese: str | None = None,
+    a_mese: str | None = None,
+) -> pd.DataFrame:
+    """Applica la procedura di qualifica: tasso danni mensile per vettore (mese di consegna prevista).
+
+    esito = 'sospensione' se il tasso supera soglia_sospensione per almeno `mesi_consecutivi` mesi di fila,
+    'piano di miglioramento' se supera soglia_piano in almeno un mese, altrimenti 'conforme'.
+    """
+    periodo = d
+    if da_mese:
+        periodo = periodo[periodo["mese_previsto"] >= da_mese]
+    if a_mese:
+        periodo = periodo[periodo["mese_previsto"] <= a_mese]
+    mensile = tasso_danni(periodo, ["vettore", "mese_previsto"]).sort_values(["vettore", "mese_previsto"])
+    righe = []
+    for vettore, g in mensile.groupby("vettore"):
+        sopra = (g["tasso_danni"] > soglia_sospensione).tolist()
+        run = best = 0
+        for flag in sopra:
+            run = run + 1 if flag else 0
+            best = max(best, run)
+        mesi_piano = g.loc[g["tasso_danni"] > soglia_piano, "mese_previsto"].tolist()
+        esito = "sospensione" if best >= mesi_consecutivi else "piano di miglioramento" if mesi_piano else "conforme"
+        righe.append({
+            "vettore": vettore,
+            "esito": esito,
+            "mesi_consecutivi_sopra_sospensione": best,
+            "mesi_sopra_soglia_piano": len(mesi_piano),
+            "tasso_danni_medio": round(float(g["danni"].sum() / g["consegnate"].sum()), 4),
+            "tasso_danni_massimo": round(float(g["tasso_danni"].max()), 4),
+            "mese_peggiore": g.loc[g["tasso_danni"].idxmax(), "mese_previsto"],
+        })
+    ordine = {"sospensione": 0, "piano di miglioramento": 1, "conforme": 2}
+    return pd.DataFrame(righe).sort_values(["esito", "tasso_danni_medio"], key=lambda s: s.map(ordine) if s.name == "esito" else -s).reset_index(drop=True)

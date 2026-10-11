@@ -19,3 +19,8 @@ langchain-anthropic==1.7.5
 # --- Test ---
 pytest==9.1.1
 httpx==0.28.1
+
+# --- Tooling knowledge base (build del PDF e relativi test) ---
+markdown==3.11
+fpdf2==2.8.9
+pypdf==6.20.0

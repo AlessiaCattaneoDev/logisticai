@@ -27,7 +27,13 @@ npm install                      # dipendenze di tutti i workspace JS
 npm test                         # TUTTI i test: shared + backend + frontend + data agent + dati
 npm run test:shared | test:be | test:fe | test:ai
 npm run typecheck
+
+# Dati e knowledge base (venv del data agent)
+cd data && ../data_agent/.venv/bin/python generate_dataset.py      # rigenera CSV + anomalie_manifest.json
+cd knowledge_base && ../data_agent/.venv/bin/python build_pdf.py   # rigenera il PDF dalle sorgenti .md
 ```
+
+Se modifichi `data/business_rules.json`, il generatore o le sorgenti della KB, rigenera CSV e/o PDF: i test falliscono se sono vecchi.
 
 ## Regole non negoziabili
 

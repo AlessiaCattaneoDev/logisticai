@@ -13,7 +13,7 @@
     "test:shared": "npm test --workspace shared/types",
     "test:be": "npm test --workspace backend",
     "test:fe": "npm test --workspace frontend",
-    "test:ai": "cd data_agent && .venv/bin/python -m pytest && cd ../data && ../data_agent/.venv/bin/python -m pytest",
+    "test:ai": "cd data_agent && .venv/bin/python -m pytest && cd ../data && ../data_agent/.venv/bin/python -m pytest && cd ../knowledge_base && ../data_agent/.venv/bin/python -m pytest",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "engines": {

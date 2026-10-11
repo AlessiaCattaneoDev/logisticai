@@ -228,7 +228,7 @@ Il generatore inserisce **pattern intenzionali**: così le analisi della demo tr
 ## 6. La knowledge base (RAG)
 
 **Formato di consegna:** un PDF principale `knowledge_base/Manuale_Operativo_Padana_Logistics.pdf`, generato da sorgenti Markdown versionate in `knowledge_base/source/*.md`.
-**Lunghezza:** ~20–30 pagine, realistica e dettagliata, con dati coerenti con il CSV.
+**Lunghezza:** 16 pagine (copertina + 10 documenti), realistica e dettagliata, con dati coerenti con il CSV. Il PDF si rigenera con `knowledge_base/build_pdf.py`; 24 test (`knowledge_base/tests/`) verificano che soglie, penali, tempi di resa e vettori dei documenti coincidano con `data/business_rules.json` e che il PDF sia aggiornato rispetto alle sorgenti.
 
 > L'ingestion legge le sorgenti `.md` (struttura a titoli pulita, chunking migliore). Il PDF è la versione "ufficiale" consegnata e leggibile da un umano. Valutare anche il parsing diretto del PDF per dimostrare che funziona.
 
@@ -1066,7 +1066,7 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | **0. Setup** ✅ | Repo git, struttura cartelle, `.gitignore`, `.env.example`, tipi condivisi, CLAUDE.md per servizio, infrastruttura di test | Scheletro repo |
 | **1. Regole di business** ✅ | Definire **prima** tempi di resa, SLA e penali dei 10 clienti, soglie dei vettori: sono la base comune di dati e KB | `data/business_rules.json` |
 | **2. Dati** ✅ | `generate_dataset.py` con anomalie e "storie"; 37 test verificano che le storie emergano davvero | CSV 12.240 righe |
-| **3. Knowledge base** | Scrittura dei 10 documenti `.md`, coerenti con la fase 1; build del PDF | PDF + sorgenti |
+| **3. Knowledge base** ✅ | Scrittura dei 10 documenti `.md`, coerenti con la fase 1; build del PDF; test di coerenza con le regole | PDF + sorgenti |
 | **4. Data agent** | `cleaning.py` + `kpi.py` + test, FastAPI + JWT di servizio, pandas agent con `init_chat_model`, grafici, sintesi, uso token | `/analyze` funzionante e protetto |
 | **5. Fondamenta del backend** | Express + config + Prisma (schema, seed), auth (login, JWT, ruoli, rate limit) | Login funzionante via curl |
 | **6. Livello LLM** | Interfacce `LLMProvider` / `EmbeddingProvider`, adapter OpenAI + Anthropic, test di conformità, telemetria `LlmCall` + calcolo costi | Cambio provider da `.env` |

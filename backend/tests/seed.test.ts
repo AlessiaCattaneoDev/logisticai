@@ -30,3 +30,13 @@ describe('seedUsers', () => {
     expect(await prisma.user.count()).toBe(0);
   });
 });
+
+describe('seedPricing', () => {
+  it('carica i listini ufficiali ed è idempotente', async () => {
+    const { seedPricing } = await import('../src/db/seed');
+    expect(await seedPricing(prisma)).toBeGreaterThanOrEqual(2);
+    await seedPricing(prisma);
+    const rows = await prisma.modelPricing.findMany();
+    expect(rows.filter((r) => r.model === 'gpt-5.4-mini')).toHaveLength(1);
+  });
+});

@@ -3,6 +3,8 @@ import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 import type { HealthResponse, ServiceStatus } from '@logisticai/shared';
+import { adminRoutes } from './admin/routes.js';
+import type { AdminService } from './admin/service.js';
 import { requireAdmin, requireAuth } from './auth/middleware.js';
 import { authRouter, type AuthConfig } from './auth/routes.js';
 import { chatRouter } from './chat/routes.js';
@@ -17,6 +19,7 @@ export interface AppDeps {
   prisma: PrismaClient;
   auth: AuthConfig;
   chat?: { service: ChatService; rateLimit?: { windowMs: number; limit: number } };
+  admin?: AdminService;
 }
 
 async function runCheck(check: HealthCheck): Promise<ServiceStatus> {
@@ -58,6 +61,7 @@ export function createApp(deps: AppDeps): Express {
   const admin = express.Router();
   admin.use(authenticated, requireAdmin);
   admin.get('/ping', (_req, res) => res.json({ ok: true }));
+  if (deps.admin) admin.use(adminRoutes(deps.admin));
   app.use('/api/admin', admin);
 
   app.use('/api', (_req, res) => {

@@ -58,3 +58,26 @@ describe('TelemetryRecorder', () => {
     expect(row.costUsd).toBe(0);
   });
 });
+
+describe('nomi di modello con data', () => {
+  it('usa il prezzo del modello base più specifico', async () => {
+    await prisma.modelPricing.createMany({
+      data: [
+        { provider: 'openai', model: 'gpt-5.4', inputPer1M: 9, outputPer1M: 9, validFrom: new Date('2026-01-01') },
+        { provider: 'openai', model: 'gpt-5.4-mini', inputPer1M: 0.75, outputPer1M: 4.5, cachedInputPer1M: 0.075, validFrom: new Date('2026-01-01') },
+      ],
+    });
+    expect((await findPricing(prisma, 'openai', 'gpt-5.4-mini-2026-03-17', new Date('2026-10-01')))?.inputPer1M).toBe(0.75);
+    expect((await findPricing(prisma, 'openai', 'gpt-5.4-2026-03-05', new Date('2026-10-01')))?.inputPer1M).toBe(9);
+    expect(await findPricing(prisma, 'openai', 'gpt-5.4mini', new Date('2026-10-01'))).toBeNull();
+  });
+
+  it('ricalcola i costi delle chiamate registrate prima del listino', async () => {
+    const rec = new TelemetryRecorder(prisma, 0.9);
+    await rec.record({ component: 'orchestrator', provider: 'openai', model: 'gpt-5.4-mini-2026-03-17', usage: { inputTokens: 1_000_000, outputTokens: 0, cachedInputTokens: 0 }, latencyMs: 1, at: new Date('2026-10-01') });
+    await prisma.modelPricing.create({ data: { provider: 'openai', model: 'gpt-5.4-mini', inputPer1M: 0.75, outputPer1M: 4.5, validFrom: new Date('2026-01-01') } });
+    const { recalculateMissingCosts } = await import('../src/telemetry/recorder');
+    expect(await recalculateMissingCosts(prisma, 0.9)).toBe(1);
+    expect((await prisma.llmCall.findFirstOrThrow()).costUsd).toBeCloseTo(0.75);
+  });
+});

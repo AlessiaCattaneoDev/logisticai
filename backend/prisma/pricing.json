@@ -1,0 +1,8 @@
+{
+  "_fonte": "Listini ufficiali consultati l'11/10/2026: developers.openai.com/api/docs/pricing (tariffe Standard). Prezzi in USD per milione di token. Aggiornabili dalla dashboard admin.",
+  "validFrom": "2026-01-01",
+  "prezzi": [
+    { "provider": "openai", "model": "gpt-5.4-mini", "inputPer1M": 0.75, "cachedInputPer1M": 0.075, "outputPer1M": 4.5 },
+    { "provider": "openai", "model": "text-embedding-3-small", "inputPer1M": 0.02, "cachedInputPer1M": null, "outputPer1M": 0 }
+  ]
+}

@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
 import pino from 'pino';
+import { AdminService } from './admin/service.js';
 import { createApp } from './app.js';
 import { ChatService } from './chat/service.js';
 import { ConfigError, loadConfig } from './config.js';
@@ -45,6 +46,24 @@ try {
     dataAgent,
   });
   const recorder = new TelemetryRecorder(prisma, config.costs.usdEurRate);
+  const chatService = new ChatService(prisma, orchestrator, recorder, 20, logger);
+  const admin = new AdminService({
+    prisma,
+    chat: chatService,
+    budgets: { dailyEur: config.costs.dailyBudgetEur, monthlyEur: config.costs.monthlyBudgetEur, usdEurRate: config.costs.usdEurRate },
+    models: { orchestrator: `${config.llm.provider}:${config.llm.model}`, dataAgent: process.env.DATA_LLM_PROVIDER && process.env.DATA_LLM_MODEL ? `${process.env.DATA_LLM_PROVIDER}:${process.env.DATA_LLM_MODEL}` : 'n/d', embedding: `${config.embedding.provider}:${config.embedding.model}` },
+    system: async () => {
+      const [chroma, agent, info] = await Promise.all([store.healthy(), dataAgent.healthy(), store.info().catch(() => null)]);
+      const quality = await dataAgent.dataQuality('admin').catch(() => null);
+      return {
+        servizi: { backend: 'ok', database: 'ok', chroma: chroma ? 'ok' : 'down', dataAgent: agent ? 'ok' : 'down' },
+        knowledgeBase: info
+          ? { chunk: info.count, documenti: info.metadata.documents ?? '', modelloEmbedding: `${info.metadata.embedding_provider}:${info.metadata.embedding_model}`, indicizzataIl: info.metadata.ingested_at ?? '' }
+          : null,
+        qualitaDati: quality as never,
+      };
+    },
+  });
 
   const app = createApp({
     frontendOrigin: config.frontendOrigin,
@@ -56,7 +75,8 @@ try {
       secureCookies: config.production,
       loginRateLimit: { windowMs: 60_000, limit: 5 },
     },
-    chat: { service: new ChatService(prisma, orchestrator, recorder, 20, logger) },
+    chat: { service: chatService },
+    admin,
   });
   app.listen(config.port, () => {
     logger.info(`Backend in ascolto su http://localhost:${config.port} (LLM ${config.llm.provider}:${config.llm.model})`);

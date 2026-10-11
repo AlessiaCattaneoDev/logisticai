@@ -113,3 +113,4 @@ export interface StoredMessage {
 export interface ConversationDetail extends ConversationSummary {
   messages: StoredMessage[];
 }
+export * from './admin.js';

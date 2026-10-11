@@ -1,4 +1,4 @@
-# LogisticAI — monorepo
+# LogisticAI - monorepo
 
 Copilota AI ibrido per Customer Service e Operations di un 3PL fittizio (Padana Logistics S.r.l.).
 Progetto finale del Master, pensato per diventare un prodotto vendibile alle PMI.
@@ -12,11 +12,11 @@ Progetto finale del Master, pensato per diventare un prodotto vendibile alle PMI
 | `frontend/` | React + Vite + TypeScript + Tailwind | 5173 | [frontend/CLAUDE.md](frontend/CLAUDE.md) |
 | `backend/` | Node.js + TypeScript + Express 5 + Prisma | 3001 | [backend/CLAUDE.md](backend/CLAUDE.md) |
 | `data_agent/` | Python 3.12 + FastAPI + LangChain pandas agent | 8001 | [data_agent/CLAUDE.md](data_agent/CLAUDE.md) |
-| ChromaDB | `chroma run` | 8000 | — |
-| `shared/types/` | Tipi TS + schemi zod condivisi (`@logisticai/shared`) | — | — |
-| `shared/contracts/fixtures/` | JSON validati sia da zod sia da pydantic | — | — |
-| `data/` | CSV spedizioni + generatore (`generate_dataset.py`) | — | vedi data_agent/CLAUDE.md |
-| `knowledge_base/` | Sorgenti `.md` e PDF della knowledge base RAG | — | — |
+| ChromaDB | `chroma run` | 8000 | - |
+| `shared/types/` | Tipi TS + schemi zod condivisi (`@logisticai/shared`) | - | - |
+| `shared/contracts/fixtures/` | JSON validati sia da zod sia da pydantic | - | - |
+| `data/` | CSV spedizioni + generatore (`generate_dataset.py`) | - | vedi data_agent/CLAUDE.md |
+| `knowledge_base/` | Sorgenti `.md` e PDF della knowledge base RAG | - | - |
 
 npm workspaces: `shared/types`, `backend`, `frontend`. Il data agent ha un venv proprio in `data_agent/.venv`.
 

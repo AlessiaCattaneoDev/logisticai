@@ -1,4 +1,4 @@
-# Data agent — Python (servizio AI di analisi dati)
+# Data agent - Python (servizio AI di analisi dati)
 
 Vedi anche: [../CLAUDE.md](../CLAUDE.md) (regole globali) e [../PROGETTO.md](../PROGETTO.md) §5 e §12.
 

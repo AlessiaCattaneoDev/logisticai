@@ -1,6 +1,6 @@
 # Qualifica e valutazione subvettori
 
-Procedura di qualità PQ-09 di Padana Logistics S.r.l. — revisione 2, gennaio 2025.
+Procedura di qualità PQ-09 di Padana Logistics S.r.l. - revisione 2, gennaio 2025.
 Responsabile: Qualità e Sicurezza, con il supporto di Operations.
 
 ## Vettori attivi

@@ -1,6 +1,6 @@
 # Merci pericolose e prodotti speciali
 
-Istruzione operativa IO-QS-08 di Padana Logistics S.r.l. — versione semplificata ad uso del Customer Service. In caso di dubbio decide sempre il responsabile Qualità e Sicurezza (int. 601).
+Istruzione operativa IO-QS-08 di Padana Logistics S.r.l. - versione semplificata ad uso del Customer Service. In caso di dubbio decide sempre il responsabile Qualità e Sicurezza (int. 601).
 
 ## Merci pericolose (ADR)
 

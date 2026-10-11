@@ -6,8 +6,8 @@ const norm = (s: string) => s.replace(/[  ]/g, ' ');
 
 describe('formatValue', () => {
   it('valori nulli diventano un trattino', () => {
-    expect(formatValue(null, 'number')).toBe('—');
-    expect(formatValue(undefined, 'currency_eur')).toBe('—');
+    expect(formatValue(null, 'number')).toBe('-');
+    expect(formatValue(undefined, 'currency_eur')).toBe('-');
   });
 
   it('valuta in euro, formato italiano', () => {

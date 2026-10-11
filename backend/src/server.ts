@@ -3,15 +3,27 @@ import { config as loadDotenv } from 'dotenv';
 import pino from 'pino';
 import { createApp } from './app.js';
 import { ConfigError, loadConfig } from './config.js';
+import { createPrisma } from './db/client.js';
 
 const logger = pino({ name: 'logisticai-backend' });
 
 // Il .env è unico, nella root del repository.
-loadDotenv({ path: resolve(import.meta.dirname, '../../.env') });
+loadDotenv({ path: resolve(import.meta.dirname, '../../.env'), quiet: true });
 
 try {
   const config = loadConfig(process.env);
-  const app = createApp({ frontendOrigin: config.frontendOrigin, healthChecks: {} });
+  const prisma = createPrisma(config.databaseUrl);
+  const app = createApp({
+    frontendOrigin: config.frontendOrigin,
+    healthChecks: {},
+    prisma,
+    auth: {
+      jwtSecret: config.jwt.secret,
+      expiresIn: config.jwt.expiresIn,
+      secureCookies: config.production,
+      loginRateLimit: { windowMs: 60_000, limit: 5 },
+    },
+  });
   app.listen(config.port, () => {
     logger.info(`Backend in ascolto su http://localhost:${config.port}`);
   });

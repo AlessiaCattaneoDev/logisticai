@@ -1,6 +1,6 @@
 # Catalogo servizi e tempi di resa
 
-Documento commerciale e operativo di Padana Logistics S.r.l. — in vigore dal 1° ottobre 2024.
+Documento commerciale e operativo di Padana Logistics S.r.l. - in vigore dal 1° ottobre 2024.
 
 ## Come si calcola la data di consegna prevista
 
@@ -27,7 +27,7 @@ La data di consegna prevista è quella su cui si misura la puntualità (vedi "Sc
 |---|---|---|---|---|
 | Standard 24/48h | 1 | 2 | 2 | non disponibile |
 | Express 24h | 1 | 1 | 1 | non disponibile |
-| Isole | — | — | — | 3 |
+| Isole | - | - | - | 3 |
 | Voluminoso | 2 | 3 | 4 | 5 |
 
 ## Servizio Standard 24/48h
@@ -54,10 +54,10 @@ Per colli oltre 30 kg o fuori sagoma (arredamento, elettrodomestici, pallet). Co
 
 | Servizio | Nord | Centro | Sud | Isole |
 |---|---|---|---|---|
-| Standard 24/48h | PAD — Flotta Padana | TRS — Trasporti Rossi | SCG — SudCargo | — |
-| Express 24h | VLX — VeloceExpress | VLX — VeloceExpress | SCG — SudCargo | — |
-| Isole | — | — | — | ISX — IsolExpress |
-| Voluminoso | PAD — Flotta Padana | TRS — Trasporti Rossi | SCG — SudCargo | ISX — IsolExpress |
+| Standard 24/48h | PAD - Flotta Padana | TRS - Trasporti Rossi | SCG - SudCargo | - |
+| Express 24h | VLX - VeloceExpress | VLX - VeloceExpress | SCG - SudCargo | - |
+| Isole | - | - | - | ISX - IsolExpress |
+| Voluminoso | PAD - Flotta Padana | TRS - Trasporti Rossi | SCG - SudCargo | ISX - IsolExpress |
 
 ## Motivi di ritardo
 

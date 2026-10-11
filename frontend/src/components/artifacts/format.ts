@@ -28,7 +28,7 @@ function formatDuration(minutes: number): string {
 }
 
 export function formatValue(value: Cell, format?: ValueFormat): string {
-  if (value === null || value === undefined) return '—';
+  if (value === null || value === undefined) return '-';
   if (typeof value === 'string') {
     return format === 'date' ? formatDate(value) : value;
   }

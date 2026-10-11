@@ -1,4 +1,4 @@
-# Frontend — React + TypeScript + Tailwind
+# Frontend - React + TypeScript + Tailwind
 
 Vedi anche: [../CLAUDE.md](../CLAUDE.md) (regole globali) e [../PROGETTO.md](../PROGETTO.md) §13–14.
 

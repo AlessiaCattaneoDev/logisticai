@@ -2,7 +2,7 @@
   "kind": "chart",
   "id": "7d1c2a8e-0001-4a5b-9c1d-000000000001",
   "type": "line",
-  "title": "Puntualità ModaNova — settembre 2026",
+  "title": "Puntualità ModaNova - settembre 2026",
   "subtitle": "Esclusi destinatario assente, indirizzo errato e forza maggiore",
   "xKey": "settimana",
   "xLabel": "Settimana",

@@ -1,6 +1,6 @@
 # Procedure di magazzino
 
-Manuale operativo di magazzino di Padana Logistics S.r.l. (HUB-PC e HUB-VR) — revisione 5, settembre 2025.
+Manuale operativo di magazzino di Padana Logistics S.r.l. (HUB-PC e HUB-VR) - revisione 5, settembre 2025.
 
 ## Ricevimento merce
 

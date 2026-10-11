@@ -1,6 +1,6 @@
 # Organizzazione e contatti
 
-Documento interno di Padana Logistics S.r.l. — revisione 4, gennaio 2026.
+Documento interno di Padana Logistics S.r.l. - revisione 4, gennaio 2026.
 Destinatari: personale di Customer Service, Operations e Magazzino.
 
 ## Chi siamo
@@ -41,10 +41,10 @@ Email dei reparti: `customerservice@padanalogistics.example`, `operations@padana
 
 ## Escalation
 
-1. **Livello 1 — Operatore Customer Service:** gestisce tracking, giacenze, riprogrammazioni, apertura reclami.
-2. **Livello 2 — Team leader Customer Service:** reclami sopra 300 €, destinatari insoddisfatti dopo due contatti, richieste di eccezioni alle procedure.
-3. **Livello 3 — Responsabile Operations:** ritardi che coinvolgono più di 20 spedizioni dello stesso cliente nello stesso giorno, problemi con un vettore, blocchi di un hub.
-4. **Livello 4 — Direzione Operations e Key Account:** contestazioni SLA, richieste di penali, minacce di recesso, comunicazioni ufficiali al cliente.
+1. **Livello 1 - Operatore Customer Service:** gestisce tracking, giacenze, riprogrammazioni, apertura reclami.
+2. **Livello 2 - Team leader Customer Service:** reclami sopra 300 €, destinatari insoddisfatti dopo due contatti, richieste di eccezioni alle procedure.
+3. **Livello 3 - Responsabile Operations:** ritardi che coinvolgono più di 20 spedizioni dello stesso cliente nello stesso giorno, problemi con un vettore, blocchi di un hub.
+4. **Livello 4 - Direzione Operations e Key Account:** contestazioni SLA, richieste di penali, minacce di recesso, comunicazioni ufficiali al cliente.
 
 Le contestazioni sullo SLA e sulle penali vanno **sempre** passate alla Direzione: l'operatore non conferma né nega l'importo di una penale al cliente.
 

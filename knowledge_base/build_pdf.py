@@ -52,7 +52,7 @@ class ManualPDF(FPDF):
         self.set_y(-12)
         self.set_font("Arial", size=8)
         self.set_text_color(120, 120, 120)
-        self.cell(0, 8, f"Padana Logistics S.r.l. — Manuale operativo — pag. {self.page_no()}", align="C", new_x="LMARGIN", new_y="NEXT")
+        self.cell(0, 8, f"Padana Logistics S.r.l. - Manuale operativo - pag. {self.page_no()}", align="C", new_x="LMARGIN", new_y="NEXT")
 
 
 def _to_html(md_text: str) -> str:
@@ -77,7 +77,7 @@ def build() -> Path:
     pdf.add_font("Arial", "B", fonts / "Arial Bold.ttf")
     pdf.add_font("Arial", "I", fonts / "Arial Italic.ttf")
     pdf.add_font("Arial", "BI", fonts / "Arial Bold.ttf")
-    pdf.set_title("Manuale operativo — Padana Logistics S.r.l.")
+    pdf.set_title("Manuale operativo - Padana Logistics S.r.l.")
     pdf.set_author("Padana Logistics S.r.l.")
     pdf.set_keywords(f"sources-sha256:{sources_hash()}")
     pdf.set_creation_date(datetime(2026, 1, 1, tzinfo=timezone.utc))  # data fissa: build riproducibile

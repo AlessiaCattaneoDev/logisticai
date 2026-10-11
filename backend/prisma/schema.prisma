@@ -1,0 +1,159 @@
+// Schema del database di LogisticAI (PROGETTO.md §11.1).
+// SQLite in sviluppo/consegna; per PostgreSQL basta cambiare provider e adapter.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  OPERATOR
+  ADMIN
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model User {
+  id            String         @id @default(uuid())
+  username      String         @unique
+  passwordHash  String
+  role          Role           @default(OPERATOR)
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  lastLoginAt   DateTime?
+  conversations Conversation[]
+  feedback      Feedback[]
+  llmCalls      LlmCall[]
+  auditLogs     AuditLog[]
+}
+
+model Conversation {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  title      String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+  messages   Message[]
+  llmCalls   LlmCall[]
+
+  @@index([userId, updatedAt])
+}
+
+model Message {
+  id             String            @id @default(uuid())
+  conversationId String
+  conversation   Conversation      @relation(fields: [conversationId], references: [id])
+  role           MessageRole
+  content        String
+  status         String            @default("ok") // ok | error
+  latencyMs      Int?
+  createdAt      DateTime          @default(now())
+  toolCalls      ToolCall[]
+  artifacts      MessageArtifact[]
+  llmCalls       LlmCall[]
+  feedback       Feedback?
+
+  @@index([conversationId, createdAt])
+}
+
+model ToolCall {
+  id            String  @id @default(uuid())
+  messageId     String
+  message       Message @relation(fields: [messageId], references: [id])
+  tool          String
+  args          Json
+  resultSummary String?
+  durationMs    Int
+  ok            Boolean
+  error         String?
+  position      Int
+}
+
+model MessageArtifact {
+  id        String  @id @default(uuid())
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id])
+  type      String // chart | table | source | code | cleaning
+  payload   Json
+  position  Int
+}
+
+model LlmCall {
+  id             String        @id @default(uuid())
+  messageId      String?
+  message        Message?      @relation(fields: [messageId], references: [id])
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id])
+  component      String // orchestrator | embedding | data_agent
+  provider       String
+  model          String
+  inputTokens    Int
+  outputTokens   Int
+  cachedTokens   Int           @default(0)
+  costUsd        Float
+  costEur        Float
+  latencyMs      Int
+  ok             Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  messageId String   @unique
+  message   Message  @relation(fields: [messageId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    String // up | down
+  reason    String?
+  comment   String?
+  status    String   @default("new") // new | reviewing | resolved
+  adminNote String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([rating, status])
+}
+
+model ModelPricing {
+  id               String   @id @default(uuid())
+  provider         String
+  model            String
+  inputPer1M       Float
+  outputPer1M      Float
+  cachedInputPer1M Float?
+  currency         String   @default("USD")
+  validFrom        DateTime @default(now())
+
+  @@unique([provider, model, validFrom])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String
+  targetType String
+  targetId   String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}

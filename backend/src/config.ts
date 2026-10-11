@@ -30,6 +30,7 @@ const provider = z.enum(LLM_PROVIDERS);
 
 const envSchema = z
   .object({
+    NODE_ENV: z.string().default('development'),
     BACKEND_PORT: z.coerce.number().int().positive().default(3001),
     FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
     JWT_SECRET: secret,
@@ -68,6 +69,7 @@ const envSchema = z
   });
 
 export interface AppConfig {
+  production: boolean;
   port: number;
   frontendOrigin: string;
   databaseUrl: string;
@@ -89,6 +91,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   }
   const e = parsed.data;
   return {
+    production: e.NODE_ENV === 'production',
     port: e.BACKEND_PORT,
     frontendOrigin: e.FRONTEND_ORIGIN,
     databaseUrl: e.DATABASE_URL,

@@ -1,6 +1,6 @@
 # Gestione giacenze e tentativi di consegna
 
-Procedura operativa PO-CS-06 di Padana Logistics S.r.l. — revisione 2, marzo 2025.
+Procedura operativa PO-CS-06 di Padana Logistics S.r.l. - revisione 2, marzo 2025.
 
 ## Tentativi di consegna
 

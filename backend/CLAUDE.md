@@ -1,4 +1,4 @@
-# Backend — orchestratore (Node.js + TypeScript)
+# Backend - orchestratore (Node.js + TypeScript)
 
 Vedi anche: [../CLAUDE.md](../CLAUDE.md) (regole globali) e [../PROGETTO.md](../PROGETTO.md) §8–11.
 
@@ -11,7 +11,11 @@ npm run dev          # tsx watch src/server.ts (legge ../.env)
 npm test             # vitest run
 npm run test:watch
 npm run typecheck    # tsc --noEmit
+npm run db:migrate   # prisma migrate dev (schema in prisma/schema.prisma)
+npm run db:seed      # utenti demo da SEED_* del .env (idempotente)
+npm run db:studio    # interfaccia web sul database
 ```
+Prisma 7: client generato in `src/generated/prisma` (ignorato da git, `postinstall` lo rigenera), driver adapter `@prisma/adapter-better-sqlite3`, config in `prisma.config.ts`. `DATABASE_URL` è relativo alla cartella `backend/`.
 
 ## Struttura
 ```
@@ -43,5 +47,6 @@ tests/               ← test di integrazione (supertest) e unit
 
 ## Test
 - Vitest + Supertest. File in `tests/**/*.test.ts` o accanto al codice come `*.test.ts`.
-- LLM sempre finto negli unit/integration test (`FakeLLMProvider`). DB SQLite di test per le rotte.
+- LLM sempre finto negli unit/integration test (`FakeLLMProvider`).
+- Database: `tests/globalSetup.ts` crea una volta `prisma/test-template.db` con le migrazioni; ogni file di test usa `createTestDb()` (copia isolata in una cartella temporanea) e `resetDb()` nel `beforeEach`. Per le app di test usa `buildTestApp()` e `createUser()` di `tests/helpers/testApp.ts`.
 - Suite di conformità degli adapter in `src/llm/__tests__/`. Le eval con LLM reale (`npm run eval`) sono separate e richiedono chiavi.

@@ -44,7 +44,7 @@ L'SMS è attivo dal 1° marzo 2025 solo per le consegne B2C e solo se il cliente
 Dipende dal danno. Se il danno era visibile dall'esterno (collo schiacciato, bagnato, strappato), senza riserva specifica il reclamo viene respinto. Se il danno è occulto (imballo integro, contenuto rotto), il reclamo è ammesso se segnalato entro 8 giorni dalla consegna, con foto e imballo originale conservato.
 
 **Basta scrivere "con riserva" sulla prova di consegna?**
-No. La riserva deve essere specifica, ad esempio "collo danneggiato — angolo schiacciato". La dicitura generica non è valida.
+No. La riserva deve essere specifica, ad esempio "collo danneggiato - angolo schiacciato". La dicitura generica non è valida.
 
 **Quanto risarcite per un collo danneggiato?**
 Fino a 10 € per kg di peso lordo, con un massimo di 500 € per spedizione e mai oltre il valore della merce, salvo dichiarazione di valore pagata dal cliente.

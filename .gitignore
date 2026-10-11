@@ -26,3 +26,5 @@ backend/prisma/*.db-journal
 .DS_Store
 .idea/
 .vscode/
+backend/src/generated/
+backend/prisma/test-template.db

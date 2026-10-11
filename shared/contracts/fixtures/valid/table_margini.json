@@ -1,7 +1,7 @@
 {
   "kind": "table",
   "id": "7d1c2a8e-0004-4a5b-9c1d-000000000004",
-  "title": "Margine per cliente — 2026",
+  "title": "Margine per cliente - 2026",
   "columns": [
     { "key": "cliente", "label": "Cliente" },
     { "key": "spedizioni", "label": "Spedizioni", "format": "integer", "align": "right" },

@@ -1,6 +1,6 @@
 # Procedura reclami e danni
 
-Procedura operativa PO-CS-05 di Padana Logistics S.r.l. — revisione 3, marzo 2025.
+Procedura operativa PO-CS-05 di Padana Logistics S.r.l. - revisione 3, marzo 2025.
 Destinatari: Customer Service, Operations, Qualità.
 
 ## Quando si apre un reclamo
@@ -15,7 +15,7 @@ I reclami per ritardo non danno diritto a risarcimento al destinatario: i ritard
 ## Riserva alla consegna
 
 Al momento della consegna il destinatario deve controllare l'integrità esterna dei colli. Se un collo è danneggiato, aperto o manomesso, il destinatario firma la prova di consegna **con riserva specifica**, scrivendo cosa ha riscontrato, ad esempio:
-- "collo danneggiato — angolo schiacciato";
+- "collo danneggiato - angolo schiacciato";
 - "collo aperto e richiuso con nastro diverso";
 - "1 collo mancante su 3".
 
@@ -42,10 +42,10 @@ Esempio: il destinatario ha accettato un collo con un angolo visibilmente schiac
 
 ## Iter interno
 
-1. **Apertura** — l'operatore Customer Service registra il reclamo entro 1 giorno lavorativo dalla segnalazione e invia al reclamante la conferma con il numero di pratica.
-2. **Istruttoria** — Qualità verifica documenti, riserva, termini e responsabilità (Padana o subvettore). Per i danni attribuiti a un subvettore, il reclamo viene ribaltato al subvettore e registrato nella sua valutazione (vedi "Qualifica e valutazione subvettori").
-3. **Esito** — entro **15 giorni lavorativi** dall'apertura il reclamo viene chiuso come **Accolto** o **Respinto**, con comunicazione scritta motivata. Finché non è chiuso, il suo stato è **In corso**.
-4. **Liquidazione** — per i reclami accolti il risarcimento è calcolato secondo il massimale delle condizioni generali: **10 € per kg**, massimo **500 € per spedizione**, salvo dichiarazione di valore. Il risarcimento non supera mai il valore della merce.
+1. **Apertura** - l'operatore Customer Service registra il reclamo entro 1 giorno lavorativo dalla segnalazione e invia al reclamante la conferma con il numero di pratica.
+2. **Istruttoria** - Qualità verifica documenti, riserva, termini e responsabilità (Padana o subvettore). Per i danni attribuiti a un subvettore, il reclamo viene ribaltato al subvettore e registrato nella sua valutazione (vedi "Qualifica e valutazione subvettori").
+3. **Esito** - entro **15 giorni lavorativi** dall'apertura il reclamo viene chiuso come **Accolto** o **Respinto**, con comunicazione scritta motivata. Finché non è chiuso, il suo stato è **In corso**.
+4. **Liquidazione** - per i reclami accolti il risarcimento è calcolato secondo il massimale delle condizioni generali: **10 € per kg**, massimo **500 € per spedizione**, salvo dichiarazione di valore. Il risarcimento non supera mai il valore della merce.
 
 ## Importo richiesto e importo risarcito
 

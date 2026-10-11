@@ -1,7 +1,7 @@
-# LogisticAI — Copilota AI ibrido per Customer Service e Operations logistiche
+# LogisticAI - Copilota AI ibrido per Customer Service e Operations logistiche
 
 > Documento di analisi e progettazione del progetto finale del Master.
-> Stato: **bozza v3 — autenticazione, dashboard admin, livello AI indipendente dal provider** (11/10/2026)
+> Stato: **bozza v3 - autenticazione, dashboard admin, livello AI indipendente dal provider** (11/10/2026)
 
 ---
 
@@ -14,12 +14,12 @@
 5. [Il dataset CSV](#5-il-dataset-csv)
 6. [La knowledge base (RAG)](#6-la-knowledge-base-rag)
 7. [Architettura a microservizi](#7-architettura-a-microservizi)
-8. [Back end — l'orchestratore](#8-back-end--lorchestratore)
+8. [Back end - l'orchestratore](#8-back-end--lorchestratore)
 9. [Livello AI indipendente dal provider](#9-livello-ai-indipendente-dal-provider)
 10. [Autenticazione e sicurezza](#10-autenticazione-e-sicurezza)
 11. [Persistenza, costi e osservabilità](#11-persistenza-costi-e-osservabilità)
-12. [Data agent — Python](#12-data-agent--python)
-13. [Front end — React](#13-front-end--react)
+12. [Data agent - Python](#12-data-agent--python)
+13. [Front end - React](#13-front-end--react)
 14. [Dashboard admin](#14-dashboard-admin)
 15. [Privacy e conformità](#15-privacy-e-conformità)
 16. [Struttura del repository](#16-struttura-del-repository)
@@ -88,7 +88,7 @@ La domanda *"Dobbiamo pagare la penale e quanto?"* richiede di:
 | Ragione sociale | Padana Logistics S.r.l. |
 | Sede | Castel San Giovanni (PC) |
 | Attività | Logistica conto terzi: stoccaggio, preparazione ordini (picking), distribuzione in tutta Italia |
-| Hub | **HUB-PC** Piacenza (sede, magazzino principale) — **HUB-VR** Verona (magazzino secondario, smistamento Nord-Est) |
+| Hub | **HUB-PC** Piacenza (sede, magazzino principale) - **HUB-VR** Verona (magazzino secondario, smistamento Nord-Est) |
 | Dipendenti | ~140 (magazzino, customer service, operations, amministrazione) |
 | Clienti | 10 aziende con contratto e SLA dedicati |
 | Trasporto | Flotta propria sul Nord + 4 subvettori per il resto d'Italia |
@@ -130,22 +130,22 @@ Nomi di clienti, vettori, hub e servizi devono essere **identici** nel CSV e nel
 | `OPERATOR` | Customer service, operations, direzione | Usare la chat, vedere le **proprie** conversazioni, dare feedback 👍/👎 |
 | `ADMIN` | Responsabile IT / AI owner | Tutto ciò che fa l'operatore + dashboard admin, gestione utenti, costi, conversazioni di tutti (con audit log, vedi §15) |
 
-### Persona 1 — Sara, operatrice customer service (`OPERATOR`)
+### Persona 1 - Sara, operatrice customer service (`OPERATOR`)
 - **Problema:** gestisce 60 chiamate ed email al giorno. Ognuna richiede di consultare SLA, condizioni di trasporto o procedure.
 - **Usa LogisticAI per:** tempi di consegna garantiti per cliente e area, gestione di giacenze e danni, documenti da chiedere, termini per i reclami.
 - **Strumento:** RAG.
 
-### Persona 2 — Luca, responsabile operations (`OPERATOR`)
+### Persona 2 - Luca, responsabile operations (`OPERATOR`)
 - **Problema:** il report mensile di qualità lo prepara a mano in Excel. Scopre i problemi (un hub in ritardo, un subvettore che danneggia la merce) settimane dopo.
 - **Usa LogisticAI per:** puntualità per hub, cliente, servizio e area; motivi di ritardo; tasso di danni per vettore; giacenze.
 - **Strumento:** data agent (+ RAG per confrontare con soglie e regole di qualifica dei vettori).
 
-### Persona 3 — Paola, direttrice operations e key account (`OPERATOR`, destinataria della presentazione)
+### Persona 3 - Paola, direttrice operations e key account (`OPERATOR`, destinataria della presentazione)
 - **Problema:** deve difendersi dalle contestazioni dei clienti, rinegoziare contratti e decidere quali subvettori tenere.
 - **Usa LogisticAI per:** penali dovute, marginalità per cliente, vettori da sospendere secondo la procedura.
 - **Strumento:** entrambi, in sequenza.
 
-### Persona 4 — Davide, responsabile IT (`ADMIN`)
+### Persona 4 - Davide, responsabile IT (`ADMIN`)
 - **Problema:** deve garantire che l'AI costi il giusto, risponda bene e sia usata in modo corretto.
 - **Usa la dashboard per:** costi per giorno/mese/periodo, risposte segnalate 👎, tempi di risposta, errori, gestione utenti, cambio del modello AI.
 
@@ -245,7 +245,7 @@ Il generatore inserisce **pattern intenzionali**: così le analisi della demo tr
 | 7 | **Procedure di magazzino** | Ricevimento merce, stoccaggio, picking, inventario, catena del freddo per FarmaSalus | `temperatura_controllata` |
 | 8 | **Merci pericolose e prodotti speciali** | Regole ADR semplificate, cosa si accetta e cosa no, colli voluminosi | `servizio = Voluminoso` |
 | 9 | **Qualifica e valutazione subvettori** | KPI minimi: puntualità, **tasso danni > 1% → piano di miglioramento, > 2% per 2 mesi → sospensione** | `vettore`, `danno` |
-| 10 | **FAQ del customer service** | Domande frequenti in formato Q&A | — |
+| 10 | **FAQ del customer service** | Domande frequenti in formato Q&A | - |
 
 ### 6.2 Pipeline RAG
 
@@ -310,7 +310,7 @@ flowchart LR
 
 ---
 
-## 8. Back end — l'orchestratore
+## 8. Back end - l'orchestratore
 
 ### 8.1 Moduli
 
@@ -402,7 +402,7 @@ interface ChatResponse {
    (limiti: max 6 iterazioni; timeout per tool; errori dei tool restituiti all'LLM come testo)
 ```
 
-**Esempio di catena — "ModaNova ha diritto a penali per settembre?"**
+**Esempio di catena - "ModaNova ha diritto a penali per settembre?"**
 1. **Reason:** servono le regole contrattuali → **Act:** `cerca_knowledge_base({ query: "SLA penali puntualità", cliente: "ModaNova" })`
 2. **Observe:** soglia 95%, penale € X per punto sotto soglia, tetto € Y, esclusi "Destinatario assente", "Indirizzo errato", forza maggiore
 3. **Reason:** ora servono i numeri, calcolati con queste regole → **Act:** `analizza_dati({ domanda: "puntualità ModaNova settembre 2026", regole_da_applicare: "soglia 95%, escludi…, penale = …" })`
@@ -441,7 +441,7 @@ Questa catena **sequenziale e dipendente** (l'output del primo tool diventa l'in
 Il resto del codice parla solo con **interfacce nostre**, mai con l'SDK di un provider:
 
 ```ts
-// llm/types.ts — formato neutro, indipendente da qualsiasi provider
+// llm/types.ts - formato neutro, indipendente da qualsiasi provider
 interface LLMProvider {
   readonly id: 'openai' | 'anthropic' | 'google' | 'mistral' | 'local';
   chat(req: LLMRequest): Promise<LLMResult>;
@@ -620,7 +620,7 @@ Il data agent **non deve accettare richieste da nessun altro** oltre al backend.
 
 ---
 
-## 12. Data agent — Python
+## 12. Data agent - Python
 
 ### 12.1 Endpoint FastAPI (tutti protetti da JWT di servizio tranne `/health`)
 
@@ -722,7 +722,7 @@ Prompt finale: tradurre i numeri in **insight per un responsabile**: cosa emerge
 
 ---
 
-## 13. Front end — React
+## 13. Front end - React
 
 ### 13.1 Stack
 - React + Vite (template `react-ts`) + **Tailwind CSS** (`@tailwindcss/vite`) + `@tailwindcss/typography`
@@ -1054,8 +1054,8 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | **Unit** | Vitest: config, auth, calcolo costi, adapter LLM, retriever, parser | Vitest + Testing Library: componenti (DataChart, DataTable, FeedbackButtons…), formattatori, parser SSE | pytest: `cleaning.py`, `kpi.py`, helper delle spec, generatore del dataset |
 | **Integrazione** | Supertest sulle rotte Express con DB SQLite di test e LLM finto | Pagine con API simulate (MSW) | `TestClient` FastAPI: `/analyze` con LLM finto, verifica del JWT di servizio |
 | **Contratto** | Schemi zod vs fixture condivise | Gli stessi schemi in rendering | pydantic vs **le stesse** fixture |
-| **Conformità LLM** | Suite unica per tutti gli adapter (§9.3) | — | — |
-| **Valutazioni AI (eval)** | Domande demo → tool attesi, ordine, fonti citate, numeri corretti, con **LLM reale** | — | Domande sui dati → valore atteso entro una tolleranza |
+| **Conformità LLM** | Suite unica per tutti gli adapter (§9.3) | - | - |
+| **Valutazioni AI (eval)** | Domande demo → tool attesi, ordine, fonti citate, numeri corretti, con **LLM reale** | - | Domande sui dati → valore atteso entro una tolleranza |
 
 - **LLM finto per default:** unit e integrazione non chiamano mai un provider reale. Sono veloci, gratuiti e deterministici.
 - **Eval con LLM reale opzionali:** `npm run eval` (richiede la chiave API nel `.env`, costa qualche centesimo). Producono un report con % di routing corretto e risposte esatte. Si rilanciano a ogni cambio di prompt o di provider: sono la prova che il cambio provider "non rompe nulla".
@@ -1068,16 +1068,16 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | **2. Dati** ✅ | `generate_dataset.py` con anomalie e "storie"; 37 test verificano che le storie emergano davvero | CSV 12.240 righe |
 | **3. Knowledge base** ✅ | Scrittura dei 10 documenti `.md`, coerenti con la fase 1; build del PDF; test di coerenza con le regole | PDF + sorgenti |
 | **4. Data agent** ✅ | `cleaning.py` + `kpi.py` + test, FastAPI + JWT di servizio, pandas agent con `init_chat_model`, grafici, sintesi, uso token | `/analyze` funzionante e protetto (83 test + 3 eval) |
-| **5. Fondamenta del backend** | Express + config + Prisma (schema, seed), auth (login, JWT, ruoli, rate limit) | Login funzionante via curl |
+| **5. Fondamenta del backend** ✅ | Express + config + Prisma (schema, seed), auth (login, JWT, ruoli, rate limit) | Login funzionante via curl |
 | **6. Livello LLM** | Interfacce `LLMProvider` / `EmbeddingProvider`, adapter OpenAI + Anthropic, test di conformità, telemetria `LlmCall` + calcolo costi | Cambio provider da `.env` |
 | **7. RAG** | Avvio Chroma, `ingest.ts`, `retriever.ts`, controllo del modello di embedding, test di retrieval sulle domande 1–4 | Collection popolata |
 | **8. Orchestratore** | Tool, system prompt, loop ReAct, stream SSE, persistenza delle conversazioni | Catena della domanda 9 funzionante |
-| **9. Front end — chat** | Vite + TS + Tailwind, login, sidebar conversazioni, chat con stati live, grafici, badge, fonti, codice, feedback | Chat usabile |
-| **10. Front end — admin** | API admin + pagine Panoramica, Conversazioni, Feedback, Costi, Utenti, Sistema | Dashboard usabile |
+| **9. Front end - chat** | Vite + TS + Tailwind, login, sidebar conversazioni, chat con stati live, grafici, badge, fonti, codice, feedback | Chat usabile |
+| **10. Front end - admin** | API admin + pagine Panoramica, Conversazioni, Feedback, Costi, Utenti, Sistema | Dashboard usabile |
 | **11. Test e tuning** | Eseguire le 19 domande demo, correggere il routing, gestione errori, prova del cambio provider | Log dei test |
 | **12. README** | Installazione dei 3 ambienti + Chroma + DB, seed, ordine di avvio, credenziali demo, troubleshooting | README completo |
 | **13. Presentazione** | Screenshot + prompt per Claude Design | PDF in `presentation/` |
-| *(Bonus)* | Script `npm run dev:all`, Docker Compose, terzo adapter (Gemini/Mistral) | — |
+| *(Bonus)* | Script `npm run dev:all`, Docker Compose, terzo adapter (Gemini/Mistral) | - |
 
 ### Ordine di avvio (anteprima per il README)
 1. `chroma run --path backend/chroma_data --host 127.0.0.1 --port 8000`
@@ -1162,7 +1162,7 @@ Da annotare **durante** lo sviluppo, con problema → causa → soluzione: servo
 | `.env` per i segreti, escluso da git | §17 |
 | README con installazione dei 3 ambienti e sequenza di avvio | §19 → README |
 | `.gitignore` (node_modules, venv, pycache, .env) | §17 |
-| Presentazione PDF (dominio, architettura, sfide, screenshot, link GitHub) | §19 fase 13 — prompt per Claude Design da preparare a fine sviluppo |
+| Presentazione PDF (dominio, architettura, sfide, screenshot, link GitHub) | §19 fase 13 - prompt per Claude Design da preparare a fine sviluppo |
 | **Extra oltre il brief** | Autenticazione utenti e tra servizi (§10), dashboard admin (§14), indipendenza dal provider (§9), privacy (§15), test automatici su tutti i servizi |
 
 > ⚠️ **Scostamento consapevole dal brief.** Il brief cita "matplotlib o seaborn" e "salvare l'immagine su disco". LogisticAI sceglie invece spec JSON + componenti React: grafici interattivi, coerenti con la UI e senza file da proteggere. Il requisito sostanziale (l'agente Python analizza i dati e genera i grafici, che compaiono in chat) è rispettato. La scelta va **motivata nel README e nella presentazione**, come decisione di prodotto.

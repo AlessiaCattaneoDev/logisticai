@@ -66,7 +66,8 @@ Regole obbligatorie:
 6. Prima di rispondere stampa (print) i valori chiave che citerai e controlla che crea_grafico / crea_tabella
    abbiano stampato "registrato": se hanno dato errore, correggi e riprova.
 7. Risposta finale in italiano, per un responsabile non tecnico: cosa emerge CON I NUMERI CHIAVE (valori, confronti,
-   soglie), perché è importante, cosa conviene fare. Cita brevemente la pulizia dati effettuata.
+   soglie), perché è importante, cosa conviene fare. Segnala SEMPRE per nome i casi critici o anomali (valori negativi,
+   i peggiori e i migliori, chi è sopra o sotto soglia). Cita brevemente la pulizia dati effettuata.
 """
 
 

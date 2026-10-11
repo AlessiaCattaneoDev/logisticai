@@ -1075,7 +1075,7 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | **8. Orchestratore** ✅ | Tool, system prompt, loop ReAct, stream SSE, persistenza delle conversazioni | Catena della domanda 9 funzionante (testata con LLM finto) |
 | **9. Front end - chat** ✅ | Vite + TS + Tailwind, login, sidebar conversazioni, chat con stati live, grafici, badge, fonti, codice, feedback | Chat usabile |
 | **10. Front end - admin** | API admin + pagine Panoramica, Conversazioni, Feedback, Costi, Utenti, Sistema | Dashboard usabile |
-| **11. Test e tuning** | Eseguire le 19 domande demo, correggere il routing, gestione errori, prova del cambio provider | Log dei test |
+| **11. Test e tuning** ✅ | Eseguire le 19 domande demo, correggere il routing, gestione errori, prova del cambio provider | Log dei test |
 | **12. README** | Installazione dei 3 ambienti + Chroma + DB, seed, ordine di avvio, credenziali demo, troubleshooting | README completo |
 | **13. Presentazione** | Screenshot + prompt per Claude Design | PDF in `presentation/` |
 | *(Bonus)* | Script `npm run dev:all`, Docker Compose, terzo adapter (Gemini/Mistral) | - |

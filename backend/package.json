@@ -15,7 +15,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "ingest": "tsx src/rag/ingestCli.ts"
+    "ingest": "tsx src/rag/ingestCli.ts",
+    "eval": "tsx evals/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

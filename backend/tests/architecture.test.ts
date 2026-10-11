@@ -44,3 +44,22 @@ describe('confini tra microservizi', () => {
     });
   }
 });
+
+describe('stile dei testi', () => {
+  const SKIP = new Set(['node_modules', '.venv', 'generated', '.git', 'dist', '.pytest_cache', '__pycache__']);
+  const EM_DASH = String.fromCharCode(0x2014);
+
+  function textFiles(dir: string): string[] {
+    return readdirSync(dir).flatMap((name) => {
+      if (SKIP.has(name)) return [];
+      const path = join(dir, name);
+      if (statSync(path).isDirectory()) return textFiles(path);
+      return /\.(md|ts|tsx|py|json|css|html)$/.test(name) && name !== 'package-lock.json' ? [path] : [];
+    });
+  }
+
+  it('nessun trattino lungo nei file del progetto', () => {
+    const offenders = textFiles(ROOT).filter((f) => readFileSync(f, 'utf8').includes(EM_DASH));
+    expect(offenders.map((f) => relative(ROOT, f))).toEqual([]);
+  });
+});

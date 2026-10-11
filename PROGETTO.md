@@ -289,7 +289,7 @@ flowchart LR
 | `frontend/` | React + Vite + TypeScript + Tailwind | 5173 | Browser | Chat, login, dashboard admin |
 | `backend/` | Node.js + TypeScript + Express 5 + Prisma | 3001 | Solo front end (via proxy) | Autenticazione, conversazioni, orchestrazione ReAct, RAG, costi, API admin |
 | Database | SQLite (sviluppo/consegna) → PostgreSQL (produzione) | file | Solo backend | Utenti, conversazioni, messaggi, chiamate LLM, feedback, audit |
-| ChromaDB | `chroma run` (server locale) | 8000 | Solo backend (`127.0.0.1`) | Vector store persistente |
+| `vector_db/` | ChromaDB (`chroma run`, venv Python proprio) | 8000 | Solo backend (`127.0.0.1`) | Vector store persistente in `vector_db/chroma_data/` |
 | `data_agent/` | Python + FastAPI + LangChain pandas agent | 8001 | Solo backend (`127.0.0.1` + JWT di servizio) | Pulizia dati, analisi, spec di grafici e tabelle, sintesi |
 
 ### Scelte architetturali
@@ -913,6 +913,7 @@ logisticai/
 │   ├── specs.py                    ← modelli pydantic ChartSpec / TableSpec
 │   ├── artifacts.py                ← crea_grafico() / crea_tabella()
 │   └── tests/
+├── vector_db/                      ← ChromaDB: requirements.txt + venv proprio, dati in chroma_data/ (ignorati da git)
 ├── frontend/
 │   ├── package.json
 │   ├── vite.config.ts
@@ -998,7 +999,7 @@ venv/
 __pycache__/
 *.pyc
 .pytest_cache/
-backend/chroma_data/
+vector_db/chroma_data/
 backend/prisma/*.db
 backend/prisma/*.db-journal
 .DS_Store
@@ -1070,7 +1071,7 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | **4. Data agent** ✅ | `cleaning.py` + `kpi.py` + test, FastAPI + JWT di servizio, pandas agent con `init_chat_model`, grafici, sintesi, uso token | `/analyze` funzionante e protetto (83 test + 3 eval) |
 | **5. Fondamenta del backend** ✅ | Express + config + Prisma (schema, seed), auth (login, JWT, ruoli, rate limit) | Login funzionante via curl |
 | **6. Livello LLM** ✅ | Interfacce `LLMProvider` / `EmbeddingProvider`, adapter OpenAI + Anthropic, test di conformità, telemetria `LlmCall` + calcolo costi | Cambio provider da `.env` |
-| **7. RAG** | Avvio Chroma, `ingest.ts`, `retriever.ts`, controllo del modello di embedding, test di retrieval sulle domande 1–4 | Collection popolata |
+| **7. RAG** ✅ | Avvio Chroma, `ingest.ts`, `retriever.ts`, controllo del modello di embedding, test di retrieval sulle domande 1–4 | Collection popolata |
 | **8. Orchestratore** | Tool, system prompt, loop ReAct, stream SSE, persistenza delle conversazioni | Catena della domanda 9 funzionante |
 | **9. Front end - chat** | Vite + TS + Tailwind, login, sidebar conversazioni, chat con stati live, grafici, badge, fonti, codice, feedback | Chat usabile |
 | **10. Front end - admin** | API admin + pagine Panoramica, Conversazioni, Feedback, Costi, Utenti, Sistema | Dashboard usabile |
@@ -1080,7 +1081,7 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | *(Bonus)* | Script `npm run dev:all`, Docker Compose, terzo adapter (Gemini/Mistral) | - |
 
 ### Ordine di avvio (anteprima per il README)
-1. `chroma run --path backend/chroma_data --host 127.0.0.1 --port 8000`
+1. `vector_db/.venv/bin/chroma run --path vector_db/chroma_data --host 127.0.0.1 --port 8000`
 2. `cd data_agent && uvicorn main:app --host 127.0.0.1 --port 8001`
 3. `cd backend && npx prisma migrate dev && npm run seed && npm run ingest` (solo la prima volta) → `npm run dev`
 4. `cd frontend && npm run dev` → http://localhost:5173 → login con le credenziali demo
@@ -1181,5 +1182,6 @@ Da annotare **durante** lo sviluppo, con problema → causa → soluzione: servo
 - [x] Grafici e tabelle **solo come componenti React** (Recharts + TanStack Table) da spec JSON; nessuna immagine matplotlib/seaborn/plotly
 - [x] Test automatici in tutti i servizi: backend (Vitest + Supertest), frontend (Vitest + Testing Library), data agent e generatore dati (pytest), test di contratto sulle spec, valutazioni AI con LLM reale opzionali
 - [x] Livello AI indipendente dal provider (porte e adapter)
-- [ ] Provider e modelli: da scegliere dopo, con criteri qualità / costo / **dati in UE** (§9.4)
+- [x] Provider per il progetto del Master: **OpenAI** (una sola chiave per orchestratore, data agent ed embedding `text-embedding-3-small`). I dati in UE non sono un vincolo per questo progetto (nessun dato personale, solo dati aziendali fittizi); restano un'opzione per i clienti futuri grazie agli adapter (§9.4)
+- [ ] Modelli OpenAI esatti per orchestratore e data agent: da fissare al primo avvio con la chiave
 - [ ] Quali 2 adapter implementare per primi (proposta: OpenAI + Anthropic)

@@ -1,0 +1,2 @@
+# Server vettoriale ChromaDB (microservizio separato)
+chromadb==1.5.9

@@ -18,7 +18,7 @@ __pycache__/
 htmlcov/
 
 # Runtime data
-backend/chroma_data/
+vector_db/chroma_data/
 backend/prisma/*.db
 backend/prisma/*.db-journal
 

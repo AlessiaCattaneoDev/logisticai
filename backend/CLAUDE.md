@@ -38,6 +38,11 @@ tests/               ← test di integrazione (supertest) e unit
 ## Convenzioni
 - **Dependency injection:** `createApp` riceve le dipendenze (config, provider LLM, client esterni, health check). Nei test si passano versioni finte; mai `process.env` fuori da `server.ts`/`config.ts`.
 - **SDK dei provider LLM solo in `src/llm/adapters/`.** Il resto del codice usa i tipi neutri di `src/llm/types.ts`.
+  - Un nuovo provider = un file in `src/llm/adapters/` + un caso in `src/llm/factory.ts` + passare `src/llm/__tests__/conformance.test.ts`.
+  - `NeutralMessage.providerState`: contenuto grezzo dell'assistente (es. blocchi thinking di Claude) da rimandare invariato **nello stesso turno ReAct**. Tra turni diversi la cronologia arriva dal DB come solo testo.
+  - Claude: niente `temperature` né `tool_choice` forzato (400 sui modelli attuali); fallback server-side (`fallbacks: "default"`) attivi solo sull'API Anthropic diretta.
+  - `LLMUsage.inputTokens` = input NON in cache; `cachedInputTokens` a parte (prezzo ridotto).
+- Costi: ogni chiamata passa da `TelemetryRecorder.record()` (`src/telemetry/`), che applica il listino `ModelPricing` valido alla data.
 - Validazione zod per input HTTP **e** per gli argomenti dei tool generati dall'LLM.
 - Gli artifact (`ChartSpec`/`TableSpec`) del data agent vanno al front end e al DB, **mai** nel contesto dell'LLM: all'LLM va solo un riepilogo testuale.
 - Ogni chiamata a un modello (orchestratore, embedding, data agent) va registrata come `LlmCall` passando da `telemetry/`.

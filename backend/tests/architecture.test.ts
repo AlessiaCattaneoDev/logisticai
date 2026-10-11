@@ -45,6 +45,17 @@ describe('confini tra microservizi', () => {
   }
 });
 
+describe('indipendenza dal provider LLM', () => {
+  const SDKS = /from\s+['"](openai|@anthropic-ai\/sdk|@google\/genai|@mistralai\/mistralai)['"]/;
+
+  it('gli SDK dei provider compaiono solo in src/llm/adapters', () => {
+    const offenders = sourceFiles(join(ROOT, 'backend', 'src'))
+      .filter((f) => !f.includes(join('src', 'llm', 'adapters')) && !f.includes('__tests__'))
+      .filter((f) => SDKS.test(readFileSync(f, 'utf8')));
+    expect(offenders.map((f) => relative(ROOT, f))).toEqual([]);
+  });
+});
+
 describe('stile dei testi', () => {
   const SKIP = new Set(['node_modules', '.venv', 'generated', '.git', 'dist', '.pytest_cache', '__pycache__']);
   const EM_DASH = String.fromCharCode(0x2014);

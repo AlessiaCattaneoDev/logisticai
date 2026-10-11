@@ -1069,7 +1069,7 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | **3. Knowledge base** ✅ | Scrittura dei 10 documenti `.md`, coerenti con la fase 1; build del PDF; test di coerenza con le regole | PDF + sorgenti |
 | **4. Data agent** ✅ | `cleaning.py` + `kpi.py` + test, FastAPI + JWT di servizio, pandas agent con `init_chat_model`, grafici, sintesi, uso token | `/analyze` funzionante e protetto (83 test + 3 eval) |
 | **5. Fondamenta del backend** ✅ | Express + config + Prisma (schema, seed), auth (login, JWT, ruoli, rate limit) | Login funzionante via curl |
-| **6. Livello LLM** | Interfacce `LLMProvider` / `EmbeddingProvider`, adapter OpenAI + Anthropic, test di conformità, telemetria `LlmCall` + calcolo costi | Cambio provider da `.env` |
+| **6. Livello LLM** ✅ | Interfacce `LLMProvider` / `EmbeddingProvider`, adapter OpenAI + Anthropic, test di conformità, telemetria `LlmCall` + calcolo costi | Cambio provider da `.env` |
 | **7. RAG** | Avvio Chroma, `ingest.ts`, `retriever.ts`, controllo del modello di embedding, test di retrieval sulle domande 1–4 | Collection popolata |
 | **8. Orchestratore** | Tool, system prompt, loop ReAct, stream SSE, persistenza delle conversazioni | Catena della domanda 9 funzionante |
 | **9. Front end - chat** | Vite + TS + Tailwind, login, sidebar conversazioni, chat con stati live, grafici, badge, fonti, codice, feedback | Chat usabile |

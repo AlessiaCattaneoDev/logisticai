@@ -16,15 +16,22 @@ Il generatore del dataset sta in `../data/` e usa lo stesso venv: `cd ../data &&
 
 ## Struttura
 ```
-main.py        ← create_app(): FastAPI, rotte /health, /analyze, /data-quality
-auth.py        ← verifica JWT di servizio (iss=logisticai-backend, aud=data-agent, exp 60 s)
-agent.py       ← pandas agent: init_chat_model(f"{DATA_LLM_PROVIDER}:{DATA_LLM_MODEL}"), agent_type tool-calling
-cleaning.py    ← pulisci_dataset(df) -> (df_pulito, report): pipeline deterministica
-kpi.py         ← calcola_puntualita(df, cause_escluse=…) e altri KPI deterministici
+main.py        ← create_app(settings, llm_factory): /health (pubblico), /analyze e /data-quality (JWT di servizio)
+config.py      ← Settings.from_env(): segreto, CSV_PATH, DATA_LLM_PROVIDER/MODEL, timeout, max_iterations
+auth.py        ← service_auth(secret): JWT HS256, iss=logisticai-backend, aud=data-agent, TTL max 120 s
+dataset.py     ← load_raw(path): CSV letto tutto come testo (le anomalie restano visibili)
+cleaning.py    ← pulisci_dataset(df) -> (df_pulito, ReportPulizia): deterministica, idempotente, colonne extra qualita_dato e mese_previsto
+kpi.py         ← calcola_puntualita, calcola_penale, tasso_danni, margine (le soglie arrivano come parametri)
 specs.py       ← modelli pydantic ChartSpec / TableSpec (contratto con shared/types)
-artifacts.py   ← crea_grafico() / crea_tabella(): DataFrame -> spec validata e registrata
-tests/
+artifacts.py   ← ArtifactRegistry: crea_grafico() / crea_tabella() -> spec validate; riepilogo() per l'LLM
+agent.py       ← DataAnalyst: create_pandas_dataframe_agent (tool-calling) + helper iniettati nel REPL + UsageRecorder
+tests/         ← fakes.py (LLM finto con tool call), test_eval.py (LLM reale, marcati eval)
 ```
+
+### Contratto di POST /analyze
+Richiesta: `{ domanda, genera_grafico, regole_da_applicare? }`
+Risposta: `{ sintesi, artifacts[] (camelCase, schema condiviso), artifacts_riepilogo[], codice_eseguito[], pulizia[], righe_analizzate, usage[{provider, model, input_tokens, output_tokens, latency_ms}] }`
+Errori: 401 token, 422 input, 502 errore del modello/agente, 504 timeout.
 
 ## Regole
 - **Nessuna libreria grafica** (matplotlib, seaborn, plotly vietati). I grafici sono `ChartSpec`, le tabelle `TableSpec`, create solo tramite gli helper di `artifacts.py`.
@@ -33,7 +40,9 @@ tests/
 - KPI che diventano soldi (puntualità → penali) si calcolano con funzioni deterministiche in `kpi.py`, testate. L'agente sceglie filtri e raggruppamenti, non la definizione del KPI.
 - Il CSV è in sola lettura. `allow_dangerous_code=True` è accettato solo perché il servizio è locale e autenticato: mantieni `max_iterations` e timeout.
 - Nessun SDK di provider importato direttamente: solo `init_chat_model`.
-- Il `.env` è nella root del repo (`../.env`).
+- Il `.env` è nella root del repo (`../.env`); `main:app` lo legge solo all'avvio di uvicorn (import nei test senza side effect).
+- `langchain-experimental` è in dismissione: tutto l'uso di `create_pandas_dataframe_agent` è confinato in `agent.py`, così si può sostituire senza toccare il resto.
+- Il servizio NON legge `data/business_rules.json` (lo verifica `test_boundaries.py`): le regole arrivano dal backend, lette dalla KB.
 
 ## Test
 - pytest; FastAPI con `TestClient`; LLM finto (`FakeListChatModel` / stub) negli unit test.

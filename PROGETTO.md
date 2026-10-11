@@ -704,7 +704,7 @@ type Artifact = ChartSpec | TableSpec;
 
 - **Helper nel REPL dell'agente:** `crea_grafico(df, tipo, x, serie, titolo, …)` e `crea_tabella(df, colonne, titolo, …)`. Convertono il DataFrame (date in ISO, `NaN` → `null`, numpy → tipi nativi), validano la spec con pydantic e la registrano. Se la spec non è valida, l'errore torna all'agente, che corregge e riprova.
 - **Fonte di verità:** il servizio restituisce solo le spec registrate dagli helper, senza fidarsi del testo dell'LLM.
-- **Limiti:** max 500 punti per grafico (oltre, l'helper aggrega o campiona e lo segnala), max 1.000 righe per tabella.
+- **Limiti:** max 500 punti per grafico e 1.000 righe per tabella: oltre, l'helper restituisce all'agente un errore che chiede di aggregare, e l'agente riprova.
 - **Contratto condiviso:** schema zod in `shared/types` e modello pydantic in `data_agent/specs.py`, verificati dalle **stesse fixture JSON** (`shared/contracts/fixtures/`) in entrambi i linguaggi.
 
 ### 12.4 Sintesi narrativa
@@ -1067,7 +1067,7 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | **1. Regole di business** ✅ | Definire **prima** tempi di resa, SLA e penali dei 10 clienti, soglie dei vettori: sono la base comune di dati e KB | `data/business_rules.json` |
 | **2. Dati** ✅ | `generate_dataset.py` con anomalie e "storie"; 37 test verificano che le storie emergano davvero | CSV 12.240 righe |
 | **3. Knowledge base** ✅ | Scrittura dei 10 documenti `.md`, coerenti con la fase 1; build del PDF; test di coerenza con le regole | PDF + sorgenti |
-| **4. Data agent** | `cleaning.py` + `kpi.py` + test, FastAPI + JWT di servizio, pandas agent con `init_chat_model`, grafici, sintesi, uso token | `/analyze` funzionante e protetto |
+| **4. Data agent** ✅ | `cleaning.py` + `kpi.py` + test, FastAPI + JWT di servizio, pandas agent con `init_chat_model`, grafici, sintesi, uso token | `/analyze` funzionante e protetto (83 test + 3 eval) |
 | **5. Fondamenta del backend** | Express + config + Prisma (schema, seed), auth (login, JWT, ruoli, rate limit) | Login funzionante via curl |
 | **6. Livello LLM** | Interfacce `LLMProvider` / `EmbeddingProvider`, adapter OpenAI + Anthropic, test di conformità, telemetria `LlmCall` + calcolo costi | Cambio provider da `.env` |
 | **7. RAG** | Avvio Chroma, `ingest.ts`, `retriever.ts`, controllo del modello di embedding, test di retrieval sulle domande 1–4 | Collection popolata |

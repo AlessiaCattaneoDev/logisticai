@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import type { HealthResponse, ServiceStatus } from '@logisticai/shared';
 import { requireAdmin, requireAuth } from './auth/middleware.js';
 import { authRouter, type AuthConfig } from './auth/routes.js';
+import { chatRouter } from './chat/routes.js';
+import type { ChatService } from './chat/service.js';
 import type { PrismaClient } from './db/client.js';
 
 export type HealthCheck = () => Promise<boolean>;
@@ -14,6 +16,7 @@ export interface AppDeps {
   healthChecks: Record<string, HealthCheck>;
   prisma: PrismaClient;
   auth: AuthConfig;
+  chat?: { service: ChatService; rateLimit?: { windowMs: number; limit: number } };
 }
 
 async function runCheck(check: HealthCheck): Promise<ServiceStatus> {
@@ -50,6 +53,8 @@ export function createApp(deps: AppDeps): Express {
 
   app.use('/api/auth', authRouter(deps.prisma, deps.auth, authenticated));
 
+  if (deps.chat) app.use('/api', chatRouter(deps.chat.service, authenticated, deps.chat.rateLimit));
+
   const admin = express.Router();
   admin.use(authenticated, requireAdmin);
   admin.get('/ping', (_req, res) => res.json({ ok: true }));
@@ -57,6 +62,12 @@ export function createApp(deps: AppDeps): Express {
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Not found' });
+  });
+
+  // Errori non gestiti: risposta JSON generica, mai stack trace al client.
+  app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (res.headersSent) return res.end();
+    res.status(500).json({ error: 'Errore interno' });
   });
 
   return app;

@@ -54,6 +54,7 @@ const envSchema = z
     DATA_AGENT_URL: z.string().default('http://127.0.0.1:8001'),
     CHROMA_URL: z.string().default('http://127.0.0.1:8000'),
     CHROMA_COLLECTION: z.string().default('kb_padana'),
+    RAG_MAX_DISTANCE: z.coerce.number().positive().max(2).default(0.65),
   })
   .superRefine((env, ctx) => {
     for (const field of ['LLM_PROVIDER', 'EMBEDDING_PROVIDER'] as const) {
@@ -81,7 +82,7 @@ export interface AppConfig {
   costs: { usdEurRate: number; dailyBudgetEur: number; monthlyBudgetEur: number };
   chatRetentionDays: number;
   dataAgentUrl: string;
-  chroma: { url: string; collection: string };
+  chroma: { url: string; collection: string; maxDistance: number };
 }
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -112,6 +113,6 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     },
     chatRetentionDays: e.CHAT_RETENTION_DAYS,
     dataAgentUrl: e.DATA_AGENT_URL,
-    chroma: { url: e.CHROMA_URL, collection: e.CHROMA_COLLECTION },
+    chroma: { url: e.CHROMA_URL, collection: e.CHROMA_COLLECTION, maxDistance: e.RAG_MAX_DISTANCE },
   };
 }

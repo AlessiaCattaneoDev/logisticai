@@ -1,4 +1,4 @@
-import type { EmbeddingProvider, EmbeddingResult } from '../llm/types.js';
+import type { EmbeddingProvider } from '../llm/types.js';
 import type { QueryHit, VectorStore } from './vectorStore.js';
 
 export interface RetrievedChunk {
@@ -9,16 +9,24 @@ export interface RetrievedChunk {
   rilevanza: number; // 1 - distanza coseno
 }
 
+export interface EmbeddingCall {
+  provider: string;
+  model: string;
+  inputTokens: number;
+  latencyMs: number;
+}
+
 export interface RetrievalResult {
   trovato: boolean;
   risultati: RetrievedChunk[];
+  /** Uso del modello di embedding per questa ricerca (telemetria dei costi). */
+  embedding: EmbeddingCall;
 }
 
 export interface RetrieverOptions {
   topK?: number;
   /** Oltre questa distanza coseno un chunk è considerato non pertinente. */
   maxDistance?: number;
-  onEmbedding?: (result: EmbeddingResult) => void | Promise<void>;
 }
 
 export class Retriever {
@@ -32,7 +40,6 @@ export class Retriever {
     const topK = opts.topK ?? this.options.topK ?? 5;
     const maxDistance = this.options.maxDistance ?? 0.65;
     const embedding = await this.embedder.embed([query]);
-    await this.options.onEmbedding?.(embedding);
     const vector = embedding.vectors[0];
 
     // Con un cliente indicato si cerca prima nella sua scheda SLA, poi nel resto della KB:
@@ -53,6 +60,10 @@ export class Retriever {
         testo: h.text.replace(/^Documento: .*\nSezione: .*\n\n/, ''),
         rilevanza: Math.round((1 - h.distance) * 1000) / 1000,
       }));
-    return { trovato: risultati.length > 0, risultati };
+    return {
+      trovato: risultati.length > 0,
+      risultati,
+      embedding: { provider: this.embedder.id, model: this.embedder.model, inputTokens: embedding.usage.inputTokens, latencyMs: embedding.latencyMs },
+    };
   }
 }

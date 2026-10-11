@@ -47,13 +47,12 @@ describe('ingestion e retrieval', () => {
   const embedder = new FakeEmbedder();
   const store = new InMemoryVectorStore();
   let retriever: Retriever;
-  const embeddingCalls: number[] = [];
 
   beforeAll(async () => {
     const res = await ingestKnowledgeBase({ sourceDir: KB, embedder, store });
     expect(res.documents).toBe(10);
     expect(res.chunks).toBeGreaterThan(40);
-    retriever = new Retriever(embedder, store, { maxDistance: 0.9, onEmbedding: (r) => void embeddingCalls.push(r.usage.inputTokens) });
+    retriever = new Retriever(embedder, store, { maxDistance: 0.9 });
   });
 
   it('salva il modello di embedding nei metadati della collection', async () => {
@@ -83,13 +82,13 @@ describe('ingestion e retrieval', () => {
 
   it('nessun risultato sopra la soglia: trovato=false', async () => {
     const strict = new Retriever(embedder, store, { maxDistance: 0.01 });
-    expect(await strict.search('quotazione del bitcoin oggi')).toEqual({ trovato: false, risultati: [] });
+    expect(await strict.search('quotazione del bitcoin oggi')).toMatchObject({ trovato: false, risultati: [] });
   });
 
-  it('notifica l’uso di token di ogni embedding (per i costi)', async () => {
-    const before = embeddingCalls.length;
-    await retriever.search('giacenza costi');
-    expect(embeddingCalls.length).toBe(before + 1);
+  it('restituisce l’uso del modello di embedding (per i costi)', async () => {
+    const { embedding } = await retriever.search('giacenza costi');
+    expect(embedding).toMatchObject({ provider: 'fake', model: 'fake-embedding' });
+    expect(embedding.inputTokens).toBeGreaterThan(0);
   });
 
   it('rispetta topK', async () => {

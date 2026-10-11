@@ -598,7 +598,7 @@ Il data agent **non deve accettare richieste da nessun altro** oltre al backend.
 | `Conversation` | id, userId, title, createdAt, updatedAt, archivedAt | Memoria conversazionale persistente |
 | `Message` | id, conversationId, role, content, status (ok/error), latencyMs, createdAt | Messaggi utente e AI |
 | `ToolCall` | id, messageId, tool, args (JSON), resultSummary, durationMs, ok, error | Cosa ha deciso e fatto l'agente |
-| `MessageArtifact` | id, messageId, type (chart/table/source/code/cleaning), payload (JSON) | Spec di grafici e tabelle, fonti, codice eseguito: la conversazione si riapre identica |
+| `MessageArtifact` | id, messageId, type (chart/table/source/data_agent), payload (JSON) | Spec di grafici e tabelle, fonti, codice eseguito: la conversazione si riapre identica |
 | `LlmCall` | id, messageId, conversationId, userId, component (orchestrator/embedding/data_agent), provider, model, inputTokens, outputTokens, cachedTokens, costUsd, costEur, latencyMs, ok, createdAt | **Base di tutte le metriche di costo** |
 | `Feedback` | id, messageId, userId, rating (up/down), reason, comment, status (new/reviewing/resolved), adminNote, createdAt | Feedback e revisione |
 | `ModelPricing` | provider, model, inputPer1M, outputPer1M, cachedInputPer1M, currency, validFrom | Prezzi modificabili senza toccare il codice |
@@ -1072,7 +1072,7 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | **5. Fondamenta del backend** ✅ | Express + config + Prisma (schema, seed), auth (login, JWT, ruoli, rate limit) | Login funzionante via curl |
 | **6. Livello LLM** ✅ | Interfacce `LLMProvider` / `EmbeddingProvider`, adapter OpenAI + Anthropic, test di conformità, telemetria `LlmCall` + calcolo costi | Cambio provider da `.env` |
 | **7. RAG** ✅ | Avvio Chroma, `ingest.ts`, `retriever.ts`, controllo del modello di embedding, test di retrieval sulle domande 1–4 | Collection popolata |
-| **8. Orchestratore** | Tool, system prompt, loop ReAct, stream SSE, persistenza delle conversazioni | Catena della domanda 9 funzionante |
+| **8. Orchestratore** ✅ | Tool, system prompt, loop ReAct, stream SSE, persistenza delle conversazioni | Catena della domanda 9 funzionante (testata con LLM finto) |
 | **9. Front end - chat** | Vite + TS + Tailwind, login, sidebar conversazioni, chat con stati live, grafici, badge, fonti, codice, feedback | Chat usabile |
 | **10. Front end - admin** | API admin + pagine Panoramica, Conversazioni, Feedback, Costi, Utenti, Sistema | Dashboard usabile |
 | **11. Test e tuning** | Eseguire le 19 domande demo, correggere il routing, gestione errori, prova del cambio provider | Log dei test |

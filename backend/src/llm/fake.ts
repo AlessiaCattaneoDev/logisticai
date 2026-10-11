@@ -9,7 +9,7 @@ import {
 } from './types.js';
 
 export type FakeTurn =
-  | { text: string; toolCalls?: undefined }
+  | { text: string; toolCalls?: undefined; refusal?: boolean }
   | { text?: string; toolCalls: Omit<ToolCallRequest, 'id'>[] }
   | { error: Error };
 
@@ -34,7 +34,7 @@ export class FakeLLMProvider implements LLMProvider {
       text,
       toolCalls,
       usage: { inputTokens: 100 * this.turn, outputTokens: 20, cachedInputTokens: 0 },
-      stopReason: toolCalls.length ? 'tool_calls' : 'end',
+      stopReason: 'refusal' in step && step.refusal ? 'refusal' : toolCalls.length ? 'tool_calls' : 'end',
       model: req.model,
       latencyMs: 5,
     };

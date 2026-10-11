@@ -89,3 +89,27 @@ export interface HealthResponse {
   status: ServiceStatus;
   services: Record<string, ServiceStatus>;
 }
+
+// Conversazioni salvate (sidebar e riapertura di una chat)
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  updatedAt: string;
+}
+
+export interface StoredMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  status: 'ok' | 'error';
+  createdAt: string;
+  artifacts: Artifact[];
+  sources: Source[];
+  toolsUsed: ToolUsage[];
+  dataAgent?: DataAgentDetails;
+  feedback?: FeedbackRating;
+}
+
+export interface ConversationDetail extends ConversationSummary {
+  messages: StoredMessage[];
+}

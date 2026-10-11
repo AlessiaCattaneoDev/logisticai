@@ -49,6 +49,8 @@ tests/               ← test di integrazione (supertest) e unit
 - Tipi condivisi con il front end: importali da `@logisticai/shared`, non duplicarli.
 - Import relativi con estensione `.js` nei file eseguiti da tsx (`./config.js`); nei test non serve.
 - Log con `pino`, mai `console.log`.
+- Chat: `ChatService` (src/chat/service.ts) salva messaggi, `ToolCall`, `MessageArtifact` (chart, table, source, data_agent) e le `LlmCall` con il `messageId`; l'orchestratore (src/orchestrator/agent.ts) non tocca il DB.
+- All'avvio `server.ts` si ferma se Chroma non risponde o se la KB è indicizzata con un altro modello di embedding (serve `npm run ingest`).
 
 ## Test
 - Vitest + Supertest. File in `tests/**/*.test.ts` o accanto al codice come `*.test.ts`.

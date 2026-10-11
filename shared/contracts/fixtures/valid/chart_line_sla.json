@@ -1,0 +1,20 @@
+{
+  "kind": "chart",
+  "id": "7d1c2a8e-0001-4a5b-9c1d-000000000001",
+  "type": "line",
+  "title": "Puntualità ModaNova — settembre 2026",
+  "subtitle": "Esclusi destinatario assente, indirizzo errato e forza maggiore",
+  "xKey": "settimana",
+  "xLabel": "Settimana",
+  "yLabel": "Puntualità",
+  "yFormat": "percent",
+  "series": [{ "key": "puntualita", "label": "Puntualità imputabile" }],
+  "data": [
+    { "settimana": "2026-09-01", "puntualita": 0.941 },
+    { "settimana": "2026-09-08", "puntualita": 0.927 },
+    { "settimana": "2026-09-15", "puntualita": 0.919 },
+    { "settimana": "2026-09-22", "puntualita": null }
+  ],
+  "referenceLines": [{ "axis": "y", "value": 0.95, "label": "Soglia SLA 95%" }],
+  "allowedTypes": ["line", "bar", "area"]
+}

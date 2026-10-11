@@ -1,0 +1,28 @@
+{
+  "name": "logisticai",
+  "private": true,
+  "version": "0.1.0",
+  "description": "LogisticAI - copilota AI ibrido per Customer Service e Operations logistiche",
+  "workspaces": [
+    "shared/types",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "test": "npm run test:shared && npm run test:be && npm run test:fe && npm run test:ai",
+    "test:shared": "npm test --workspace shared/types",
+    "test:be": "npm test --workspace backend",
+    "test:fe": "npm test --workspace frontend",
+    "test:ai": "cd data_agent && .venv/bin/python -m pytest && cd ../data && ../data_agent/.venv/bin/python -m pytest",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^5.0.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}

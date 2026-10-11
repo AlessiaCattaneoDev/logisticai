@@ -1,0 +1,49 @@
+import type { ValueFormat } from '@logisticai/shared';
+
+type Cell = string | number | null | undefined;
+
+// In it-IT i numeri a 4 cifre non vengono raggruppati di default: forziamo il separatore.
+const grouping = { useGrouping: 'always' } as const;
+
+const formatters = {
+  number: new Intl.NumberFormat('it-IT', { maximumFractionDigits: 2, ...grouping }),
+  integer: new Intl.NumberFormat('it-IT', { maximumFractionDigits: 0, ...grouping }),
+  percent: new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1, ...grouping }),
+  currency: new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', ...grouping }),
+};
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
+
+function formatDate(value: string): string {
+  if (!ISO_DATE.test(value)) return value;
+  const date = new Date(value.length === 10 ? `${value}T00:00:00` : value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return h > 0 ? `${h} h ${m} min` : `${m} min`;
+}
+
+export function formatValue(value: Cell, format?: ValueFormat): string {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'string') {
+    return format === 'date' ? formatDate(value) : value;
+  }
+  switch (format) {
+    case 'integer':
+      return formatters.integer.format(value);
+    case 'percent':
+      return formatters.percent.format(value);
+    case 'currency_eur':
+      return formatters.currency.format(value);
+    case 'duration_min':
+      return formatDuration(value);
+    case 'string':
+      return String(value);
+    default:
+      return formatters.number.format(value);
+  }
+}

@@ -1,0 +1,21 @@
+# --- Servizio ---
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.0
+pyjwt==2.15.1
+python-dotenv==1.2.4
+
+# --- Dati (nessuna libreria grafica: i grafici sono spec JSON renderizzate in React) ---
+pandas==3.0.6
+numpy==2.5.4
+tabulate==0.10.0
+
+# --- Agente (provider configurabile via init_chat_model) ---
+langchain==1.4.4
+langchain-experimental==0.4.2
+langchain-openai==1.7.0
+langchain-anthropic==1.7.5
+
+# --- Test ---
+pytest==9.1.1
+httpx==0.28.1

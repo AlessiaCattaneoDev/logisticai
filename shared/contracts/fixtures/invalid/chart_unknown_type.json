@@ -1,0 +1,9 @@
+{
+  "kind": "chart",
+  "id": "x4",
+  "type": "radar3d",
+  "title": "Tipo non supportato",
+  "xKey": "k",
+  "series": [{ "key": "a", "label": "A" }],
+  "data": [{ "k": "x", "a": 1 }]
+}

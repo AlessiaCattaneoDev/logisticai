@@ -1,0 +1,17 @@
+{
+  "kind": "table",
+  "id": "7d1c2a8e-0004-4a5b-9c1d-000000000004",
+  "title": "Margine per cliente — 2026",
+  "columns": [
+    { "key": "cliente", "label": "Cliente" },
+    { "key": "spedizioni", "label": "Spedizioni", "format": "integer", "align": "right" },
+    { "key": "ricavo", "label": "Ricavo", "format": "currency_eur", "align": "right" },
+    { "key": "margine_pct", "label": "Margine %", "format": "percent", "align": "right" }
+  ],
+  "rows": [
+    { "cliente": "ModaNova", "spedizioni": 820, "ricavo": 7298.0, "margine_pct": 0.18 },
+    { "cliente": "CasaViva Arredo", "spedizioni": 210, "ricavo": 9450.5, "margine_pct": -0.07 }
+  ],
+  "totals": { "cliente": "Totale", "spedizioni": 1030, "ricavo": 16748.5, "margine_pct": null },
+  "defaultSort": { "key": "margine_pct", "direction": "asc" }
+}

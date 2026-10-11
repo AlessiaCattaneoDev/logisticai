@@ -1,0 +1,9 @@
+{
+  "kind": "chart",
+  "id": "x5",
+  "type": "bar",
+  "title": "Nessun dato",
+  "xKey": "k",
+  "series": [{ "key": "a", "label": "A" }],
+  "data": []
+}

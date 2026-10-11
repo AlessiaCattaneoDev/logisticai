@@ -1,0 +1,96 @@
+{
+  "seed": 42,
+  "righe_pulite": 12000,
+  "righe_csv": 12240,
+  "righe_con_anomalie": 1224,
+  "anomalie": {
+    "duplicati_esatti": {
+      "descrizione": "Riga identica ripetuta",
+      "conteggio": 180,
+      "esempi": [
+        "SP-2024-000104",
+        "SP-2024-000179",
+        "SP-2024-000181",
+        "SP-2024-000198",
+        "SP-2024-000240"
+      ]
+    },
+    "quasi_duplicati": {
+      "descrizione": "Stessa spedizione con spazi o maiuscole diverse nell'id e nel cliente",
+      "conteggio": 60,
+      "esempi": [
+        "SP-2024-000384",
+        "SP-2024-000722",
+        "SP-2024-000835",
+        "SP-2024-001099",
+        "SP-2024-001306"
+      ]
+    },
+    "valori_mancanti": {
+      "descrizione": "Celle vuote in vettore, peso_kg, ricavo_eur o regione_destinazione",
+      "conteggio": 300,
+      "esempi": [
+        "SP-2024-000044",
+        "SP-2024-000115",
+        "SP-2024-000125",
+        "SP-2024-000131",
+        "SP-2024-000151"
+      ]
+    },
+    "date_formati_misti": {
+      "descrizione": "Date in formato gg/mm/aaaa, mm-gg-aaaa o '14 mar 2026'",
+      "conteggio": 240,
+      "esempi": [
+        "SP-2024-000013",
+        "SP-2024-000039",
+        "SP-2024-000088",
+        "SP-2024-000101",
+        "SP-2024-000135"
+      ]
+    },
+    "categorie_incoerenti": {
+      "descrizione": "Varianti di nome per cliente, hub o servizio (maiuscole, spazi, abbreviazioni)",
+      "conteggio": 240,
+      "esempi": [
+        "SP-2024-000048",
+        "SP-2024-000102",
+        "SP-2024-000123",
+        "SP-2024-000128",
+        "SP-2024-000149"
+      ]
+    },
+    "numeri_formato_testo": {
+      "descrizione": "Numeri in formato italiano o con unità/valuta ('1.250,50', '€ 8,90', '7,4 kg')",
+      "conteggio": 84,
+      "esempi": [
+        "SP-2024-000221",
+        "SP-2024-000447",
+        "SP-2024-000579",
+        "SP-2024-000812",
+        "SP-2024-000883"
+      ]
+    },
+    "fuori_range": {
+      "descrizione": "Peso negativo o 9999 kg, ricavo zero, costo negativo",
+      "conteggio": 60,
+      "esempi": [
+        "SP-2024-000302",
+        "SP-2024-001016",
+        "SP-2024-001087",
+        "SP-2024-001200",
+        "SP-2024-001460"
+      ]
+    },
+    "incoerenze_logiche": {
+      "descrizione": "Consegna prima del ritiro, 'Consegnata' senza data, date future, reclamo senza danno",
+      "conteggio": 60,
+      "esempi": [
+        "SP-2024-000011",
+        "SP-2024-000324",
+        "SP-2024-000343",
+        "SP-2024-000364",
+        "SP-2024-000807"
+      ]
+    }
+  }
+}

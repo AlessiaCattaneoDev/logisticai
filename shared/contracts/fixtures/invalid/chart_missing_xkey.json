@@ -1,0 +1,9 @@
+{
+  "kind": "chart",
+  "id": "x2",
+  "type": "line",
+  "title": "xKey inesistente",
+  "xKey": "mese",
+  "series": [{ "key": "valore", "label": "Valore" }],
+  "data": [{ "settimana": "2026-01", "valore": 1 }]
+}

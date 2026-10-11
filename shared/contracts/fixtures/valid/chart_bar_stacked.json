@@ -1,0 +1,18 @@
+{
+  "kind": "chart",
+  "id": "7d1c2a8e-0002-4a5b-9c1d-000000000002",
+  "type": "bar",
+  "title": "Motivi di ritardo per area",
+  "xKey": "area",
+  "yFormat": "integer",
+  "series": [
+    { "key": "traffico_meteo", "label": "Traffico/Meteo" },
+    { "key": "picco_volumi", "label": "Picco volumi hub" },
+    { "key": "destinatario_assente", "label": "Destinatario assente", "color": "#94a3b8" }
+  ],
+  "data": [
+    { "area": "Nord", "traffico_meteo": 120, "picco_volumi": 80, "destinatario_assente": 210 },
+    { "area": "Sud", "traffico_meteo": 95, "picco_volumi": 140, "destinatario_assente": 170 }
+  ],
+  "stacked": true
+}

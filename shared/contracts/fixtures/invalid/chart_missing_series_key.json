@@ -1,0 +1,9 @@
+{
+  "kind": "chart",
+  "id": "x1",
+  "type": "bar",
+  "title": "Serie inesistente",
+  "xKey": "area",
+  "series": [{ "key": "non_esiste", "label": "Boh" }],
+  "data": [{ "area": "Nord", "valore": 1 }]
+}

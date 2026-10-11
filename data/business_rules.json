@@ -1,0 +1,109 @@
+{
+  "_descrizione": "Regole di business di Padana Logistics: unica fonte di verità per il generatore del dataset e per i documenti della knowledge base. Il data agent NON legge questo file: le regole deve trovarle nella KB.",
+  "azienda": {
+    "ragione_sociale": "Padana Logistics S.r.l.",
+    "sede": "Castel San Giovanni (PC)"
+  },
+  "periodo_dati": { "inizio": "2024-10-01", "fine": "2026-09-30" },
+  "hub": {
+    "HUB-PC": { "nome": "Hub di Piacenza", "citta": "Castel San Giovanni (PC)", "ruolo": "Sede e magazzino principale" },
+    "HUB-VR": { "nome": "Hub di Verona", "citta": "Verona (VR)", "ruolo": "Magazzino secondario e smistamento Nord-Est" }
+  },
+  "aree": {
+    "Nord": ["Lombardia", "Piemonte", "Veneto", "Emilia-Romagna", "Liguria", "Friuli-Venezia Giulia", "Trentino-Alto Adige", "Valle d'Aosta"],
+    "Centro": ["Toscana", "Lazio", "Marche", "Umbria", "Abruzzo"],
+    "Sud": ["Campania", "Puglia", "Calabria", "Basilicata", "Molise"],
+    "Isole": ["Sicilia", "Sardegna"]
+  },
+  "orario_limite_ritiro": "17:00",
+  "servizi": {
+    "Standard 24/48h": {
+      "descrizione": "Servizio standard su colli fino a 30 kg",
+      "tempi_resa_giorni_lavorativi": { "Nord": 1, "Centro": 2, "Sud": 2 },
+      "aree_servite": ["Nord", "Centro", "Sud"]
+    },
+    "Express 24h": {
+      "descrizione": "Consegna il giorno lavorativo successivo al ritiro",
+      "tempi_resa_giorni_lavorativi": { "Nord": 1, "Centro": 1, "Sud": 1 },
+      "aree_servite": ["Nord", "Centro", "Sud"]
+    },
+    "Isole": {
+      "descrizione": "Servizio dedicato a Sicilia e Sardegna (via traghetto). L'Express non è disponibile per le isole.",
+      "tempi_resa_giorni_lavorativi": { "Isole": 3 },
+      "aree_servite": ["Isole"]
+    },
+    "Voluminoso": {
+      "descrizione": "Colli oltre 30 kg o fuori sagoma (arredamento, elettrodomestici). Consegna al piano su appuntamento.",
+      "tempi_resa_giorni_lavorativi": { "Nord": 2, "Centro": 3, "Sud": 4, "Isole": 5 },
+      "aree_servite": ["Nord", "Centro", "Sud", "Isole"]
+    }
+  },
+  "vettori": {
+    "PAD": { "nome": "Flotta Padana (interna)", "copertura": "Nord: Standard e Voluminoso" },
+    "TRS": { "nome": "Trasporti Rossi S.r.l.", "copertura": "Centro: Standard e Voluminoso" },
+    "VLX": { "nome": "VeloceExpress S.p.A.", "copertura": "Nord e Centro: Express 24h" },
+    "SCG": { "nome": "SudCargo S.r.l.", "copertura": "Sud: tutti i servizi" },
+    "ISX": { "nome": "IsolExpress S.r.l.", "copertura": "Sicilia e Sardegna" }
+  },
+  "assegnazione_vettori": {
+    "Standard 24/48h": { "Nord": "PAD", "Centro": "TRS", "Sud": "SCG" },
+    "Express 24h": { "Nord": "VLX", "Centro": "VLX", "Sud": "SCG" },
+    "Isole": { "Isole": "ISX" },
+    "Voluminoso": { "Nord": "PAD", "Centro": "TRS", "Sud": "SCG", "Isole": "ISX" }
+  },
+  "motivi_ritardo": {
+    "Traffico": { "imputabile_a_padana": true },
+    "Meteo avverso": { "imputabile_a_padana": false, "nota": "forza maggiore (allerta meteo ufficiale)" },
+    "Picco volumi hub": { "imputabile_a_padana": true },
+    "Mezzo guasto": { "imputabile_a_padana": true },
+    "Ritardo subvettore": { "imputabile_a_padana": true, "nota": "Padana risponde verso il cliente anche per i subvettori" },
+    "Destinatario assente": { "imputabile_a_padana": false },
+    "Indirizzo errato": { "imputabile_a_padana": false, "nota": "indirizzo fornito dal cliente incompleto o errato" }
+  },
+  "misurazione_sla": {
+    "periodo": "mese solare, in base alla data di consegna prevista",
+    "puntuale_se": "data di consegna effettiva <= data di consegna prevista",
+    "escluse_dal_calcolo": ["spedizioni con motivo di ritardo non imputabile (Meteo avverso, Destinatario assente, Indirizzo errato)", "spedizioni In transito"],
+    "non_puntuali": ["consegne in ritardo con motivo imputabile", "spedizioni Smarrite"],
+    "formula": "puntualita = spedizioni puntuali / (spedizioni totali - spedizioni escluse)",
+    "volume_minimo_mensile": 50,
+    "nota_volume": "sotto 50 spedizioni nel mese la penale non si applica",
+    "calcolo_penale": "punti_sotto_soglia = (soglia - puntualita) x 100, arrotondato a un decimale; penale = punti_sotto_soglia x importo_per_punto, fino al tetto mensile"
+  },
+  "clienti": {
+    "ModaNova": { "settore": "Moda e-commerce B2C", "hub": "HUB-PC", "soglia_puntualita": 0.95, "penale_per_punto_eur": 1000, "tetto_penale_mensile_eur": 5000, "nota": "Express solo verso Nord e Centro" },
+    "TechPoint": { "settore": "Elettronica", "hub": "HUB-VR", "soglia_puntualita": 0.96, "penale_per_punto_eur": 500, "tetto_penale_mensile_eur": 4000 },
+    "BellaPelle Cosmetici": { "settore": "Cosmetica", "hub": "HUB-PC", "soglia_puntualita": 0.93, "penale_per_punto_eur": 250, "tetto_penale_mensile_eur": 2000 },
+    "CasaViva Arredo": { "settore": "Arredamento", "hub": "HUB-VR", "soglia_puntualita": 0.90, "penale_per_punto_eur": 300, "tetto_penale_mensile_eur": 2500 },
+    "FarmaSalus": { "settore": "Parafarmaco", "hub": "HUB-PC", "soglia_puntualita": 0.98, "penale_per_punto_eur": 800, "tetto_penale_mensile_eur": 6000 },
+    "GustoItaliano": { "settore": "Alimentare secco", "hub": "HUB-VR", "soglia_puntualita": 0.94, "penale_per_punto_eur": 300, "tetto_penale_mensile_eur": 2500 },
+    "BrianzaUtensili": { "settore": "Utensileria B2B", "hub": "HUB-PC", "soglia_puntualita": 0.95, "penale_per_punto_eur": 200, "tetto_penale_mensile_eur": 1500 },
+    "KidsPlanet": { "settore": "Giocattoli", "hub": "HUB-VR", "soglia_puntualita": 0.93, "penale_per_punto_eur": 300, "tetto_penale_mensile_eur": 2500, "clausola_picco": "nei mesi di novembre e dicembre la soglia scende a 0.90" },
+    "SportLab": { "settore": "Articoli sportivi", "hub": "HUB-VR", "soglia_puntualita": 0.94, "penale_per_punto_eur": 250, "tetto_penale_mensile_eur": 2000 },
+    "LibriMondo": { "settore": "Editoria", "hub": "HUB-PC", "soglia_puntualita": 0.92, "penale_per_punto_eur": 150, "tetto_penale_mensile_eur": 1000 }
+  },
+  "reclami_danni": {
+    "riserva_alla_consegna": "il destinatario deve firmare con riserva specifica ('collo danneggiato', 'collo aperto'); la sola firma 'con riserva' generica non è valida",
+    "danni_occulti_giorni": 8,
+    "nota_danni_occulti": "senza riserva alla consegna, il reclamo è ammesso solo per danni non visibili dall'esterno, segnalati entro 8 giorni dalla consegna con foto e imballo originale",
+    "massimale_eur_per_kg": 10,
+    "massimale_eur_per_spedizione": 500,
+    "nota_massimale": "salvo dichiarazione di valore pagata dal cliente (supplemento 0,5% del valore dichiarato)",
+    "risposta_entro_giorni_lavorativi": 15
+  },
+  "giacenze": {
+    "tentativi_di_consegna": 2,
+    "durata_giacenza_giorni_lavorativi": 10,
+    "costo_apertura_giacenza_eur": 5,
+    "costo_giornaliero_giacenza_eur": 1,
+    "dopo_la_giacenza": "reso al mittente, con costo pari alla tariffa di andata",
+    "preavviso_sms": { "dal": "2025-03-01", "ambito": "consegne B2C", "descrizione": "SMS al destinatario il giorno prima con fascia oraria e link per riprogrammare" }
+  },
+  "qualifica_subvettori": {
+    "puntualita_minima": 0.90,
+    "tasso_danni_piano_miglioramento": 0.01,
+    "tasso_danni_sospensione": 0.02,
+    "mesi_consecutivi_per_sospensione": 2,
+    "nota": "tasso danni = spedizioni con danno / spedizioni consegnate nel mese"
+  }
+}

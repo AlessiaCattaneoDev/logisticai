@@ -1,0 +1,7 @@
+{
+  "kind": "table",
+  "id": "x7",
+  "title": "Valore annidato non ammesso",
+  "columns": [{ "key": "cliente", "label": "Cliente" }],
+  "rows": [{ "cliente": { "nome": "ModaNova" } }]
+}

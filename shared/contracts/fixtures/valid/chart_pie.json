@@ -1,0 +1,13 @@
+{
+  "kind": "chart",
+  "id": "7d1c2a8e-0003-4a5b-9c1d-000000000003",
+  "type": "pie",
+  "title": "Spedizioni per servizio",
+  "xKey": "servizio",
+  "series": [{ "key": "spedizioni", "label": "Spedizioni" }],
+  "data": [
+    { "servizio": "Standard 24/48h", "spedizioni": 3100 },
+    { "servizio": "Express 24h", "spedizioni": 1200 },
+    { "servizio": "Isole", "spedizioni": 400 }
+  ]
+}

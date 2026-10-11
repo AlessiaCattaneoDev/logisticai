@@ -1,0 +1,9 @@
+{
+  "kind": "chart",
+  "id": "x3",
+  "type": "pie",
+  "title": "Torta con due serie",
+  "xKey": "k",
+  "series": [{ "key": "a", "label": "A" }, { "key": "b", "label": "B" }],
+  "data": [{ "k": "x", "a": 1, "b": 2 }]
+}

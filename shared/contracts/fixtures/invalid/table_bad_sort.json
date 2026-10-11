@@ -1,0 +1,8 @@
+{
+  "kind": "table",
+  "id": "x6",
+  "title": "Ordinamento su colonna inesistente",
+  "columns": [{ "key": "cliente", "label": "Cliente" }],
+  "rows": [{ "cliente": "ModaNova" }],
+  "defaultSort": { "key": "ricavo", "direction": "desc" }
+}

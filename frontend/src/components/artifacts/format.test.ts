@@ -14,6 +14,11 @@ describe('formatValue', () => {
     expect(norm(formatValue(1250.5, 'currency_eur'))).toBe('1.250,50 €');
   });
 
+  it('importi sotto il centesimo con più decimali', () => {
+    expect(norm(formatValue(0.0013, 'currency_eur'))).toBe('0,0013 €');
+    expect(norm(formatValue(0, 'currency_eur'))).toBe('0,00 €');
+  });
+
   it('percentuali da frazione', () => {
     expect(norm(formatValue(0.928, 'percent'))).toBe('92,8%');
   });

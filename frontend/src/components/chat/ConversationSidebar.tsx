@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, LogOut, Plus } from 'lucide-react';
+import { Archive, Gauge, LogOut, Plus } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router';
 import type { AuthUser } from '@logisticai/shared';
 import { conversationsApi } from '../../api/endpoints';
@@ -46,6 +46,11 @@ export function ConversationSidebar({ user, activeId, onNavigate }: { user: Auth
         ))}
         {conversations.length === 0 && <li className="px-3 py-2 text-sm text-white/50">Le tue conversazioni compariranno qui.</li>}
       </ul>
+      {user.role === 'ADMIN' && (
+        <NavLink to="/admin" className="mx-3 mb-2 flex items-center gap-2 rounded px-3 py-2 text-sm text-white/85 hover:bg-white/10">
+          <Gauge size={15} aria-hidden /> Dashboard admin
+        </NavLink>
+      )}
       <div className="border-t border-white/10 px-4 py-3 text-sm">
         <p className="font-medium">{user.username}</p>
         <div className="mt-1 flex items-center justify-between text-white/60">

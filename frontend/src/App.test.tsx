@@ -95,7 +95,9 @@ describe('chat', () => {
     await userEvent.click(await screen.findByRole('button', { name: /ModaNova ha diritto a penali/ }));
     // Nuova conversazione: l'URL diventa /chat/:id e la vista si rimonta usando la cache.
     await waitFor(() => expect(router.state.location.pathname).toBe('/chat/conv-1'));
-    const answer = await screen.findByRole('article', { name: 'Risposta di LogisticAI' });
+    // Si attende la risposta salvata (con i pulsanti di valutazione) prima di leggerne il contenuto.
+    await screen.findByRole('button', { name: 'Risposta utile' });
+    const answer = screen.getByRole('article', { name: 'Risposta di LogisticAI' });
     expect(within(answer).getByText('93,3%')).toBeInTheDocument();
     expect(body).toEqual({ message: 'ModaNova ha diritto a penali per settembre 2026? A quanto ammontano?' });
     const timeline = within(answer).getByRole('list', { name: "Passaggi dell'assistente" });
@@ -120,8 +122,9 @@ describe('chat', () => {
     const router = renderAt('/chat');
     await userEvent.type(await screen.findByLabelText('Scrivi una domanda'), 'Penale ModaNova?{Enter}');
     await waitFor(() => expect(router.state.location.pathname).toBe('/chat/conv-1'));
-    const answer = await screen.findByRole('article', { name: 'Risposta di LogisticAI' });
-    await userEvent.click(await within(answer).findByRole('button', { name: 'Risposta da migliorare' }));
+    await screen.findByRole('button', { name: 'Risposta da migliorare' });
+    const answer = screen.getByRole('article', { name: 'Risposta di LogisticAI' });
+    await userEvent.click(within(answer).getByRole('button', { name: 'Risposta da migliorare' }));
     await userEvent.click(within(answer).getByText('Numeri sbagliati'));
     await userEvent.type(within(answer).getByLabelText('Commento (facoltativo)'), 'il totale non torna');
     await userEvent.click(within(answer).getByRole('button', { name: 'Invia segnalazione' }));

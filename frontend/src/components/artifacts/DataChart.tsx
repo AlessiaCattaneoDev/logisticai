@@ -110,8 +110,8 @@ export function DataChart({ spec, initialDimension }: Props) {
     const element = (s: (typeof visible)[number]) => {
       const kind = type === 'composed' ? (s.type ?? 'bar') : type;
       const common = { key: s.key, dataKey: s.key, name: s.label, isAnimationActive: false };
-      if (kind === 'line') return <Line {...common} type="monotone" stroke={s.color} strokeWidth={2} dot={spec.data.length <= 24} connectNulls={false} />;
-      if (kind === 'area') return <Area {...common} type="monotone" stroke={s.color} fill={s.color} fillOpacity={0.15} stackId={spec.stacked ? 'stack' : undefined} />;
+      if (kind === 'line') return <Line {...common} type="linear" stroke={s.color} strokeWidth={2} dot={spec.data.length <= 24} connectNulls={false} />;
+      if (kind === 'area') return <Area {...common} type="linear" stroke={s.color} fill={s.color} fillOpacity={0.15} stackId={spec.stacked ? 'stack' : undefined} />;
       return <Bar {...common} fill={s.color} stackId={spec.stacked ? 'stack' : undefined} maxBarSize={48} />;
     };
     return (

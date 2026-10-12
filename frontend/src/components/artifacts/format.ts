@@ -10,6 +10,8 @@ const formatters = {
   integer: new Intl.NumberFormat('it-IT', { maximumFractionDigits: 0, ...grouping }),
   percent: new Intl.NumberFormat('it-IT', { style: 'percent', maximumFractionDigits: 1, ...grouping }),
   currency: new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', ...grouping }),
+  // Sotto il centesimo (es. costo di una chiamata AI) servono più decimali, altrimenti si legge "0,00 €".
+  smallCurrency: new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumSignificantDigits: 2 }),
 };
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
@@ -38,7 +40,7 @@ export function formatValue(value: Cell, format?: ValueFormat): string {
     case 'percent':
       return formatters.percent.format(value);
     case 'currency_eur':
-      return formatters.currency.format(value);
+      return value !== 0 && Math.abs(value) < 0.01 ? formatters.smallCurrency.format(value) : formatters.currency.format(value);
     case 'duration_min':
       return formatDuration(value);
     case 'string':

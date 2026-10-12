@@ -9,8 +9,8 @@ import { stepsFromTools, TrackingTimeline } from './TrackingTimeline';
 
 interface Props {
   message: UiMessage;
-  onRetry: (m: UiMessage) => void;
-  onFeedback: (messageId: string, rating: FeedbackRating, reason?: string, comment?: string) => Promise<void>;
+  onRetry?: (m: UiMessage) => void;
+  onFeedback?: (messageId: string, rating: FeedbackRating, reason?: string, comment?: string) => Promise<void>;
 }
 
 export function AssistantMessage({ message, onRetry, onFeedback }: Props) {
@@ -24,7 +24,7 @@ export function AssistantMessage({ message, onRetry, onFeedback }: Props) {
       {message.status === 'error' ? (
         <div role="alert" className="text-esito-ko">
           <p>{message.content}</p>
-          {message.retryable && message.question && (
+          {message.retryable && message.question && onRetry && (
             <button type="button" onClick={() => onRetry(message)} className="mt-2 inline-flex items-center gap-1 rounded border border-esito-ko px-3 py-1 text-sm">
               <RotateCcw size={14} aria-hidden /> Riprova
             </button>
@@ -76,7 +76,8 @@ export function AssistantMessage({ message, onRetry, onFeedback }: Props) {
           </div>
         </details>
       )}
-      {saved && <FeedbackButtons current={message.feedback} onSubmit={(rating, reason, comment) => onFeedback(message.id, rating, reason, comment)} />}
+      {saved && onFeedback && <FeedbackButtons current={message.feedback} onSubmit={(rating, reason, comment) => onFeedback(message.id, rating, reason, comment)} />}
+      {!onFeedback && message.feedback && <p className="mt-3 text-sm text-ardesia">Valutazione dell'utente: {message.feedback === 'up' ? 'utile' : 'da migliorare'}</p>}
     </article>
   );
 }

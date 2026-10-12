@@ -25,12 +25,12 @@ src/
 ├── main.tsx · App.tsx (router) · index.css
 ├── api/             ← client HTTP (credentials: 'include') + parser SSE (fetch + ReadableStream)
 ├── auth/            ← contesto utente, ProtectedRoute per ruolo
-├── pages/           ← LoginPage, ChatPage, admin/*
+├── pages/           ← LoginPage, ChatPage, admin/* (Overview, Conversations, ConversationDetail, Feedback, Costs, Users, System, Audit)
 ├── chat/            ← state.ts (reducer puro della chat) e useChat.ts (stream SSE, cache, retry, feedback)
 ├── components/
 │   ├── chat/        ← AssistantMessage, TrackingTimeline (stati live), FeedbackButtons, Composer, ConversationSidebar, SuggestedQuestions
 │   ├── artifacts/   ← ArtifactRenderer, DataChart, DataTable, format.ts
-│   └── admin/
+│   └── admin/       ← ui.tsx (PageHeader, Panel, BudgetBar, QueryState), PeriodPicker, useNames (pseudonimi)
 └── test/setup.ts    ← jest-dom + cleanup
 ```
 
@@ -47,3 +47,8 @@ src/
 - Vitest + Testing Library + jest-dom, file `*.test.tsx` accanto al componente.
 - Cerca gli elementi per ruolo/label (`getByRole`), non per classi CSS.
 - API simulate con MSW (`src/test/msw.ts`, con `sseResponse()` per lo stream della chat) negli integration test delle pagine. Recharts in jsdom: verifica titolo, legenda e controlli, non i pixel (passa `initialDimension`).
+
+## Dashboard admin
+- Rotte `/admin/*` protette da `ProtectedRoute role="ADMIN"`; il periodo sta nella query string (`?periodo=7g`, `da`, `a`).
+- I grafici della panoramica sono `ChartSpec` costruite dai dati dell'API e disegnate con lo stesso `DataChart` della chat.
+- Gli utenti si mostrano con pseudonimo (`Utente #n`); "Mostra nomi" chiama `/api/admin/reveal-names`, che il backend registra nell'audit.

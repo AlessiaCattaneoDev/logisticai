@@ -3,7 +3,7 @@
 Vedi anche: [../CLAUDE.md](../CLAUDE.md) (regole globali) e [../PROGETTO.md](../PROGETTO.md) §8–11.
 
 ## Ruolo
-Autenticazione, conversazioni, loop ReAct con function calling, RAG su ChromaDB, chiamate al data agent, telemetria dei costi, API della dashboard admin. Stream SSE su `POST /api/chat`.
+Autenticazione, conversazioni, loop ReAct con function calling, RAG su ChromaDB, libreria documenti (caricamento, estrazione testo, indicizzazione), API della home, chiamate al data agent, telemetria dei costi, API della dashboard admin. Stream SSE su `POST /api/chat`.
 
 ## Comandi
 ```bash
@@ -13,6 +13,7 @@ npm run test:watch
 npm run typecheck    # tsc --noEmit
 npm run db:migrate   # prisma migrate dev (schema in prisma/schema.prisma)
 npm run db:seed      # utenti demo da SEED_* del .env (idempotente)
+npm run ingest       # registra i 10 documenti iniziali e ricrea la collection Chroma da tutti i documenti del DB
 npm run db:studio    # interfaccia web sul database
 ```
 Prisma 7: client generato in `src/generated/prisma` (ignorato da git, `postinstall` lo rigenera), driver adapter `@prisma/adapter-better-sqlite3`, config in `prisma.config.ts`. `DATABASE_URL` è relativo alla cartella `backend/`.
@@ -27,7 +28,9 @@ src/
 ├── chat/            ← rotte chat, conversazioni, feedback, SSE
 ├── orchestrator/    ← loop ReAct, definizioni tool, system prompt (+ prompts/overrides/<provider>.ts)
 ├── llm/             ← LLMProvider / EmbeddingProvider, factory, adapters/, pricing
-├── rag/             ← client Chroma, retriever, ingest
+├── rag/             ← client Chroma, retriever (filtro per documento/categoria), chunker, ingest
+├── documents/       ← extract.ts (PDF unpdf, DOCX mammoth, TXT, MD), catalog.ts (categorie e documenti iniziali), service.ts (coda di indicizzazione), routes.ts
+├── home/            ← HomeService: dashboard personale e indicatori admin
 ├── services/        ← dataAgentClient (JWT di servizio 60 s, aud=data-agent)
 ├── telemetry/       ← LlmCall, calcolo costi, budget
 ├── admin/           ← API dashboard
@@ -50,6 +53,8 @@ tests/               ← test di integrazione (supertest) e unit
 - Import relativi con estensione `.js` nei file eseguiti da tsx (`./config.js`); nei test non serve.
 - Log con `pino`, mai `console.log`.
 - Chat: `ChatService` (src/chat/service.ts) salva messaggi, `ToolCall`, `MessageArtifact` (chart, table, source, data_agent) e le `LlmCall` con il `messageId`; l'orchestratore (src/orchestrator/agent.ts) non tocca il DB.
+- Documenti: il file caricato va in `backend/storage/documents/` (escluso da git), la riga nasce `processing` e la coda sequenziale di `DocumentService` lo porta a `ready` (con il numero di sezioni) o `error` (motivo leggibile). All'avvio i documenti rimasti `processing` vengono rielaborati. Ogni sezione in Chroma ha `documentId` e `categoryId` per la chat con ambito.
+- Chat con ambito (`scope` in `POST /api/chat`): solo lo strumento documentale, retriever filtrato, ambito salvato sulla conversazione.
 - All'avvio `server.ts` si ferma se Chroma non risponde o se la KB è indicizzata con un altro modello di embedding (serve `npm run ingest`).
 
 ## Test

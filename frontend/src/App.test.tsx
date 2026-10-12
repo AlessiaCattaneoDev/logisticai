@@ -8,7 +8,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { ChartSpec, ChatResponse, ChatStreamEvent } from '@logisticai/shared';
 import { createQueryClient, routes } from './App';
-import { sara, server, sseResponse, state } from './test/msw';
+import { doc, sara, server, sseResponse, state } from './test/msw';
 
 const chart = JSON.parse(readFileSync(resolve(__dirname, '../../shared/contracts/fixtures/valid/chart_line_sla.json'), 'utf8')) as ChartSpec;
 
@@ -19,6 +19,7 @@ beforeEach(() => {
   state.user = null;
   state.conversations = [];
   state.details = {};
+  state.documents = [doc()];
 });
 
 function renderAt(path: string) {
@@ -59,7 +60,7 @@ const streamEvents: ChatStreamEvent[] = [
 describe('accesso', () => {
   it('senza sessione porta al login', async () => {
     renderAt('/chat');
-    expect(await screen.findByRole('heading', { name: 'LogisticAI' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Accedi' })).toBeInTheDocument();
     expect(screen.getByLabelText('Nome utente')).toBeInTheDocument();
   });
 
@@ -72,14 +73,16 @@ describe('accesso', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Nome utente o password non corretti.');
   });
 
-  it('login riuscito: si apre la chat con le domande suggerite', async () => {
+  it('login riuscito: si apre la home con il saluto e il menu', async () => {
     server.use(http.post('*/api/auth/login', () => { state.user = sara; return HttpResponse.json(sara); }));
     renderAt('/login');
     await userEvent.type(await screen.findByLabelText('Nome utente'), 'sara.operatrice');
     await userEvent.type(screen.getByLabelText('Password'), 'SaraDemo!2026');
     await userEvent.click(screen.getByRole('button', { name: 'Accedi' }));
-    expect(await screen.findByRole('heading', { name: 'Cosa ti serve sapere?' })).toBeInTheDocument();
-    expect(screen.getByText('sara.operatrice')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /, sara\.operatrice$/ })).toBeInTheDocument();
+    const nav = screen.getAllByRole('navigation', { name: 'Menu principale' })[0];
+    expect(within(nav).getByText('sara.operatrice')).toBeInTheDocument();
+    expect(within(nav).queryByText('Amministrazione')).not.toBeInTheDocument();
   });
 });
 
@@ -105,7 +108,7 @@ describe('chat', () => {
     expect(timeline).toHaveTextContent('Storico spedizioni analizzato');
     expect(timeline).toHaveTextContent('8,2 s');
     expect(within(answer).getByText(chart.title)).toBeInTheDocument();
-    expect(within(answer).getByText(/Schede SLA per cliente, sezione "ModaNova"/)).toBeInTheDocument();
+    expect(within(answer).getByText('Fonti').nextElementSibling).toHaveTextContent('Schede SLA per cliente, sezione "ModaNova"');
     await userEvent.click(within(answer).getByText('Come sono stati calcolati i numeri'));
     expect(within(answer).getByText('Rimosse 240 righe duplicate')).toBeVisible();
   });

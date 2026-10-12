@@ -41,11 +41,10 @@ const conversations: AdminConversationRow[] = [
 ];
 
 describe('accesso', () => {
-  it('un operatore viene rimandato alla chat', async () => {
+  it('un operatore viene rimandato alla home', async () => {
     state.user = sara;
-    server.use(http.post('*/api/chat', () => HttpResponse.json({})));
     const router = renderAt('/admin');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/chat'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
   });
 });
 
@@ -53,12 +52,13 @@ describe('panoramica', () => {
   it('KPI, budget, avviso sui modelli senza prezzo e grafici', async () => {
     server.use(http.get('*/api/admin/overview', () => HttpResponse.json(overview)));
     renderAt('/admin');
-    const kpi = await screen.findByText('Costo del periodo');
-    const strip = kpi.closest('dl')!;
-    expect(within(strip).getByText('42')).toBeInTheDocument();
-    expect(within(strip).getByText('75%')).toBeInTheDocument();
-    expect(within(strip).getByRole('meter', { name: 'Budget giornaliero' })).toHaveAttribute('aria-valuenow', '4.2');
-    expect(within(strip).getByText('84% del budget')).toBeInTheDocument();
+    const costi = await screen.findByRole('region', { name: 'Costi' });
+    expect(within(costi).getByText('Costo del periodo')).toBeInTheDocument();
+    expect(within(costi).getByRole('meter', { name: 'Budget giornaliero' })).toHaveAttribute('aria-valuenow', '4.2');
+    expect(within(costi).getByText('84% del budget')).toBeInTheDocument();
+    const uso = screen.getByRole('region', { name: 'Uso e qualità' });
+    expect(within(uso).getByText('42')).toBeInTheDocument();
+    expect(within(uso).getByText('75%')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('openai:gpt-5.4');
     for (const t of ['Costo AI giornaliero', "Decisioni dell'agente", 'Tempo di risposta', 'Valutazioni degli utenti']) {
       expect(screen.getByText(t)).toBeInTheDocument();

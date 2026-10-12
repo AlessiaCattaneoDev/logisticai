@@ -1,5 +1,6 @@
 import type {
   AuthUser,
+  ChatRequest,
   ChatStreamEvent,
   ConversationDetail,
   ConversationSummary,
@@ -23,7 +24,7 @@ export const conversationsApi = {
     api<{ rating: string }>(`/api/messages/${messageId}/feedback`, { method: 'POST', body: JSON.stringify(body) }),
 };
 
-export async function* streamChat(input: { conversationId?: string; message: string }, signal?: AbortSignal): AsyncGenerator<ChatStreamEvent> {
+export async function* streamChat(input: ChatRequest, signal?: AbortSignal): AsyncGenerator<ChatStreamEvent> {
   const res = await fetch(apiUrl('/api/chat'), {
     method: 'POST',
     credentials: 'include',

@@ -1,7 +1,7 @@
 # LogisticAI
 
-Copilota AI per il Customer Service e le Operations di un operatore logistico conto terzi (3PL).
-Da un'unica chat risponde sia a domande sui **documenti aziendali** (contratti SLA, procedure, condizioni di trasporto) sia a domande sui **dati delle spedizioni** (puntualità, danni, penali, margini), e decide da solo quale strumento usare, anche in sequenza.
+Piattaforma AI per il Customer Service e le Operations di un operatore logistico conto terzi (3PL).
+Raccoglie i documenti aziendali in una libreria condivisa e, da un'unica chat, risponde sia a domande sui **documenti aziendali** (contratti SLA, procedure, condizioni di trasporto) sia a domande sui **dati delle spedizioni** (puntualità, danni, penali, margini), e decide da solo quale strumento usare, anche in sequenza.
 
 Caso aziendale: **Padana Logistics S.r.l.**, 3PL fittizio con hub a Piacenza e Verona, 10 clienti con SLA dedicati e 5 vettori.
 
@@ -36,6 +36,9 @@ Caso aziendale: **Padana Logistics S.r.l.**, 3PL fittizio con hub a Piacenza e V
 | "ModaNova ha diritto a penali per settembre 2026?" | L'agente **prima** legge le regole dello SLA nella knowledge base (soglia 95%, 1.000 € per punto, esclusioni), **poi** le passa al data agent, che calcola la penale: **1.700,00 €**. |
 
 Inoltre:
+- **Home dopo il login**: per ogni utente i suoi numeri (documenti disponibili, conversazioni, domande del mese, risposte trovate utili), le conversazioni da riprendere e i documenti aggiunti di recente; per l'admin anche costo AI di oggi, segnalazioni da rivedere e stato dei servizi.
+- **Libreria documenti per categorie**: chiunque può caricare un PDF, un Word, un testo o un Markdown; il backend estrae il testo, lo divide in sezioni e lo indicizza nella knowledge base, e dopo pochi secondi l'assistente lo usa per rispondere. L'admin crea e rinomina le categorie; l'autore o l'admin possono eliminare un documento.
+- **"Chiedi a questo documento"**: chat limitata a un documento o a una categoria, segnalata da un'etichetta arancio che si toglie con un clic.
 - **Stati live** durante la risposta, mostrati come la timeline di tracking di una spedizione.
 - **Grafici e tabelle interattivi** (React): cambio tipo di grafico, serie nascondibili, linea della soglia SLA, "Vedi dati", export CSV.
 - **Conversazioni salvate** e feedback 👍/👎 su ogni risposta.
@@ -126,7 +129,7 @@ vector_db/.venv/bin/chroma run --path vector_db/chroma_data --host 127.0.0.1 --p
 La prima volta, con Chroma avviato, indicizza la knowledge base:
 
 ```bash
-cd backend && npm run ingest                        # 10 documenti, 76 sezioni
+cd backend && npm run ingest                        # registra i 10 documenti iniziali nella libreria e li indicizza
 ```
 
 ### 2. Data agent
@@ -158,8 +161,8 @@ Create da `npm run db:seed` con le password definite nel `.env` (`SEED_*`). Con 
 
 | Utente | Password | Ruolo |
 |---|---|---|
-| `sara.operatrice` | `SaraDemo!2026` | Operatore: chat, conversazioni, feedback |
-| `admin` | `AdminDemo!2026` | Amministratore: chat e dashboard admin (`/admin`) |
+| `sara.operatrice` | `SaraDemo!2026` | Operatore: home, chat, documenti (carica ed elimina i propri), feedback |
+| `admin` | `AdminDemo!2026` | Amministratore: in più gestione categorie e amministrazione (`/admin`) |
 
 Credenziali valide **solo per la demo**.
 
@@ -197,6 +200,8 @@ Per passare a **Claude**: `LLM_PROVIDER=anthropic`, `LLM_MODEL=claude-opus-5-5` 
 | Documenti e dati | Secondo la procedura di qualifica, qualche subvettore andrebbe sospeso? | Sì, VeloceExpress |
 | Robustezza | Qual è la capitale della Francia? | Non risponde nel merito: spiega di cosa si occupa |
 | Memoria | Dopo la domanda sui danni: "E solo per i clienti dell'hub di Verona?" | Ripete l'analisi filtrata su HUB-VR (VLX al 3,9%) |
+| Documento caricato | Carica `backend/tests/fixtures/documents/policy-resi.docx`, poi "Chiedi a questo documento": "Entro quanto può chiedere il reso il destinatario e chi paga il ritiro?" | 30 giorni dalla consegna, ritiro a carico del cliente mittente |
+| Ambito | Con l'etichetta su "Procedure di magazzino": "ModaNova ha diritto a penali per settembre 2026?" | Non lo trova in quel documento e propone di togliere l'ambito |
 
 ## Test e valutazioni
 
@@ -208,26 +213,26 @@ npm run typecheck        # controllo dei tipi TypeScript
 | Parte | Strumenti | Test |
 |---|---|---|
 | Contratto delle spec di grafici e tabelle | Vitest + zod, pytest + pydantic sulle stesse fixture | 12 + 14 |
-| Backend | Vitest + Supertest, database SQLite isolato, LLM finto | 144 |
-| Frontend | Vitest + Testing Library + MSW | 46 |
-| Data agent | pytest, LLM finto | 98 |
+| Backend | Vitest + Supertest, database SQLite isolato, LLM finto, file PDF/DOCX/TXT reali | 182 |
+| Frontend | Vitest + Testing Library + MSW | 59 |
+| Data agent | pytest, LLM finto | 103 |
 | Generatore del dataset | pytest: anomalie e storie nei dati | 37 |
 | Knowledge base | pytest: coerenza con le regole di business, PDF aggiornato | 24 |
 
 **Valutazioni con LLM reale** (costano qualche centesimo, servono i servizi avviati):
 
 ```bash
-cd backend && npm run eval                           # 16 domande demo sul sistema completo
+cd backend && npm run eval                           # 20 domande demo sul sistema completo, 3 con ambito
 cd data_agent && .venv/bin/python -m pytest -m eval  # 3 analisi del data agent
 ```
 
-`npm run eval` verifica per ogni domanda gli strumenti usati e il loro ordine, i numeri attesi, le fonti citate e la presenza di grafici, e salva un report in `backend/evals/results/`. Ultimo risultato: **16/16**.
+`npm run eval` verifica per ogni domanda gli strumenti usati e il loro ordine, i numeri attesi, le fonti citate e la presenza di grafici, e salva un report in `backend/evals/results/`. Ultimo risultato sulla suite completa: **19/20**; l'unico caso mancato (robustezza-qualita-dati, il riassunto della pulizia senza il numero dei duplicati) è passato in 2 riesecuzioni su 2.
 
 ## Struttura del repository
 
 ```
-├── frontend/          React: chat, grafici e tabelle, dashboard admin
-├── backend/           Node.js: autenticazione, orchestratore ReAct, RAG, telemetria costi, API admin
+├── frontend/          React: home, libreria documenti, chat, grafici e tabelle, amministrazione
+├── backend/           Node.js: autenticazione, orchestratore ReAct, RAG, libreria documenti, telemetria costi, API admin
 │   ├── prisma/        schema del database, migrazioni, seed, listini prezzi
 │   └── evals/         valutazioni end-to-end con LLM reale
 ├── data_agent/        Python: pulizia dati, KPI, pandas agent, spec di grafici e tabelle
@@ -249,6 +254,7 @@ cd data_agent && .venv/bin/python -m pytest -m eval  # 3 analisi del data agent
 
 ## Scelte progettuali
 
+- **Documenti elaborati nel backend.** Estrazione del testo (PDF con `unpdf`, Word con `mammoth`), divisione in sezioni e indicizzazione avvengono in una coda dentro il backend, che già possiede embedding, Chroma e telemetria: nessun servizio in più da avviare. Il file è controllato per estensione, firma reale e dimensione (15 MB); un PDF scansionato senza testo finisce in stato "Errore" con il motivo.
 - **FastAPI invece di `child_process`.** Il data agent è un vero microservizio: carica il CSV una volta, ha un health check, è autenticato e si può scalare a parte.
 - **Grafici come componenti React, non immagini.** Il brief suggerisce matplotlib o seaborn con immagini salvate su disco. LogisticAI fa produrre al data agent una *specifica JSON* del grafico (`ChartSpec` / `TableSpec`), che il frontend disegna con Recharts e TanStack Table. I grafici diventano interattivi e coerenti con l'interfaccia, e non ci sono file da proteggere. Il requisito sostanziale resta: l'agente Python analizza i dati e genera i grafici, che compaiono in chat.
 - **I numeri che diventano soldi non dipendono dal codice generato dall'LLM.** Penali SLA e qualifica dei vettori si calcolano con funzioni deterministiche e testate (`data_agent/kpi.py`). L'agente sceglie quale usare e con quali regole, lette dalla knowledge base.

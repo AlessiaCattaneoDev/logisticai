@@ -2,6 +2,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { createBrowserRouter, Navigate, RouterProvider, type RouteObject } from 'react-router';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import { AppShell } from './components/layout/AppShell';
+import { CategoryPage } from './pages/CategoryPage';
+import { DocumentsPage } from './pages/DocumentsPage';
+import { HomePage } from './pages/HomePage';
 import { ChatPage } from './pages/ChatPage';
 import { LoginPage } from './pages/LoginPage';
 import { AdminLayout } from './pages/admin/AdminLayout';
@@ -16,23 +20,31 @@ import { UsersPage } from './pages/admin/UsersPage';
 
 export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
-  { path: '/chat', element: <ProtectedRoute><ChatPage /></ProtectedRoute> },
-  { path: '/chat/:conversationId', element: <ProtectedRoute><ChatPage /></ProtectedRoute> },
   {
-    path: '/admin',
-    element: <ProtectedRoute role="ADMIN"><AdminLayout /></ProtectedRoute>,
+    element: <ProtectedRoute><AppShell /></ProtectedRoute>,
     children: [
-      { index: true, element: <OverviewPage /> },
-      { path: 'conversazioni', element: <ConversationsPage /> },
-      { path: 'conversazioni/:id', element: <ConversationDetailPage /> },
-      { path: 'feedback', element: <FeedbackPage /> },
-      { path: 'costi', element: <CostsPage /> },
-      { path: 'utenti', element: <UsersPage /> },
-      { path: 'sistema', element: <SystemPage /> },
-      { path: 'registro', element: <AuditPage /> },
+      { index: true, element: <HomePage /> },
+      { path: 'chat', element: <ChatPage /> },
+      { path: 'chat/:conversationId', element: <ChatPage /> },
+      { path: 'documenti', element: <DocumentsPage /> },
+      { path: 'documenti/:categoriaId', element: <CategoryPage /> },
+      {
+        path: 'admin',
+        element: <ProtectedRoute role="ADMIN"><AdminLayout /></ProtectedRoute>,
+        children: [
+          { index: true, element: <OverviewPage /> },
+          { path: 'conversazioni', element: <ConversationsPage /> },
+          { path: 'conversazioni/:id', element: <ConversationDetailPage /> },
+          { path: 'feedback', element: <FeedbackPage /> },
+          { path: 'costi', element: <CostsPage /> },
+          { path: 'utenti', element: <UsersPage /> },
+          { path: 'sistema', element: <SystemPage /> },
+          { path: 'registro', element: <AuditPage /> },
+        ],
+      },
     ],
   },
-  { path: '*', element: <Navigate to="/chat" replace /> },
+  { path: '*', element: <Navigate to="/" replace /> },
 ];
 
 export function createQueryClient() {

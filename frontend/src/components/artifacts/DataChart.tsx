@@ -21,6 +21,7 @@ import type { ChartSpec, ChartType, TableSpec } from '@logisticai/shared';
 import { downloadCsv, slug, toCsv } from './csv';
 import { DataTable } from './DataTable';
 import { formatCategory, formatValue, isMonthlySeries } from './format';
+import { AXIS, BAR_RADIUS, BAR_RADIUS_H, ChartTooltip, CURSOR, GRID, X_AXIS } from './chartTheme';
 import { seriesColor, THRESHOLD_COLOR } from './palette';
 
 export const CHART_TYPE_LABELS: Record<ChartType, string> = {
@@ -80,124 +81,138 @@ export function DataChart({ spec, initialDimension }: Props) {
   const visible = spec.series.map((s, i) => ({ ...s, color: seriesColor(i, s.color) })).filter((s) => !hidden.has(s.key));
   const horizontal = !!spec.horizontal && type === 'bar';
 
+  const tooltip = <Tooltip cursor={CURSOR} content={(p) => <ChartTooltip {...p} fmtY={fmtY} fmtX={type === 'scatter' ? undefined : fmtX} />} />;
+
   const renderChart = () => {
     if (type === 'pie') {
       const s = spec.series[0];
       return (
         <PieChart>
-          <Pie data={spec.data} dataKey={s.key} nameKey={spec.xKey} innerRadius="45%" outerRadius="80%" paddingAngle={1} isAnimationActive={false}>
+          <Pie data={spec.data} dataKey={s.key} nameKey={spec.xKey} innerRadius="55%" outerRadius="85%" paddingAngle={2} cornerRadius={6} stroke="none" isAnimationActive={false}>
             {spec.data.map((_, i) => (
               <Cell key={i} fill={seriesColor(i)} />
             ))}
           </Pie>
-          <Tooltip formatter={(v) => fmtY(v)} />
+          <Tooltip content={(p) => <ChartTooltip {...p} fmtY={fmtY} />} />
         </PieChart>
       );
     }
     if (type === 'scatter') {
       return (
         <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
-          <CartesianGrid stroke="#e3e7ec" />
-          <XAxis dataKey={spec.xKey} type="number" tickFormatter={fmtX} name={spec.xLabel} />
-          <YAxis dataKey={visible[0]?.key} tickFormatter={fmtY} name={spec.yLabel} width={72} />
-          <Tooltip formatter={(v) => fmtY(v)} />
+          <CartesianGrid {...GRID} vertical />
+          <XAxis {...X_AXIS} dataKey={spec.xKey} type="number" tickFormatter={fmtX} name={spec.xLabel} />
+          <YAxis {...AXIS} dataKey={visible[0]?.key} tickFormatter={fmtY} name={spec.yLabel} width={72} />
+          {tooltip}
           {visible.map((s) => (
-            <Scatter key={s.key} name={s.label} data={spec.data} fill={s.color} isAnimationActive={false} />
+            <Scatter key={s.key} name={s.label} data={spec.data} fill={s.color} fillOpacity={0.75} isAnimationActive={false} />
           ))}
         </ScatterChart>
       );
     }
+    const lastBar = [...visible].reverse().find((s) => (type === 'composed' ? (s.type ?? 'bar') : type) === 'bar')?.key;
     const element = (s: (typeof visible)[number]) => {
       const kind = type === 'composed' ? (s.type ?? 'bar') : type;
       const common = { dataKey: s.key, name: s.label, isAnimationActive: false };
-      if (kind === 'line') return <Line key={s.key} {...common} type="linear" stroke={s.color} strokeWidth={2} dot={spec.data.length <= 24} connectNulls={false} />;
-      if (kind === 'area') return <Area key={s.key} {...common} type="linear" stroke={s.color} fill={s.color} fillOpacity={0.15} stackId={spec.stacked ? 'stack' : undefined} />;
-      return <Bar key={s.key} {...common} fill={s.color} stackId={spec.stacked ? 'stack' : undefined} maxBarSize={48} />;
+      if (kind === 'line')
+        return <Line key={s.key} {...common} type="linear" stroke={s.color} strokeWidth={2.5} dot={spec.data.length <= 24 ? { r: 3.5, fill: s.color, stroke: '#fff', strokeWidth: 2 } : false} activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }} connectNulls={false} />;
+      if (kind === 'area')
+        return <Area key={s.key} {...common} type="linear" stroke={s.color} strokeWidth={2.5} fill={`url(#grad-${spec.id}-${s.key})`} stackId={spec.stacked ? 'stack' : undefined} />;
+      // Con le barre impilate si arrotonda solo l'ultima serie, quella in cima.
+      const rounded = !spec.stacked || s.key === lastBar;
+      return <Bar key={s.key} {...common} fill={s.color} stackId={spec.stacked ? 'stack' : undefined} maxBarSize={44} radius={rounded ? (horizontal ? BAR_RADIUS_H : BAR_RADIUS) : 0} />;
     };
     return (
-      <ComposedChart data={spec.data} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
-        <CartesianGrid stroke="#e3e7ec" vertical={false} />
+      <ComposedChart data={spec.data} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 8, right: 16, bottom: 4, left: 4 }} barGap={4} barCategoryGap="22%">
+        <defs>
+          {visible.map((s) => (
+            <linearGradient key={s.key} id={`grad-${spec.id}-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.color} stopOpacity={0.28} />
+              <stop offset="100%" stopColor={s.color} stopOpacity={0.02} />
+            </linearGradient>
+          ))}
+        </defs>
+        <CartesianGrid {...GRID} vertical={horizontal} horizontal={!horizontal} />
         {horizontal ? (
           <>
-            <XAxis type="number" tickFormatter={fmtY} />
-            <YAxis type="category" dataKey={spec.xKey} tickFormatter={fmtX} width={120} />
+            <XAxis {...AXIS} type="number" tickFormatter={fmtY} />
+            <YAxis {...AXIS} type="category" dataKey={spec.xKey} tickFormatter={fmtX} width={128} />
           </>
         ) : (
           <>
-            <XAxis dataKey={spec.xKey} tickFormatter={fmtX} />
-            <YAxis tickFormatter={fmtY} width={72} domain={type === 'bar' ? [0, 'auto'] : ['auto', 'auto']} />
+            <XAxis {...X_AXIS} dataKey={spec.xKey} tickFormatter={fmtX} />
+            <YAxis {...AXIS} tickFormatter={fmtY} width={72} domain={type === 'bar' ? [0, 'auto'] : ['auto', 'auto']} />
           </>
         )}
-        <Tooltip formatter={(v) => fmtY(v)} labelFormatter={(l) => fmtX(l)} />
+        {tooltip}
         {visible.map(element)}
-        {(spec.referenceLines ?? []).map((r) =>
-          r.axis === 'y' && !horizontal ? (
-            <ReferenceLine key={r.label} y={r.value} ifOverflow="extendDomain" stroke={THRESHOLD_COLOR} strokeWidth={2} strokeDasharray="6 4" label={{ value: r.label, position: 'insideTopRight', fill: '#8a6a06', fontSize: 12 }} />
-          ) : (
-            <ReferenceLine key={r.label} x={r.value} ifOverflow="extendDomain" stroke={THRESHOLD_COLOR} strokeWidth={2} strokeDasharray="6 4" label={{ value: r.label, position: 'insideTopRight', fill: '#8a6a06', fontSize: 12 }} />
-          ),
-        )}
+        {(spec.referenceLines ?? []).map((r) => {
+          const label = { value: r.label, position: 'insideTopRight' as const, fill: '#b4530c', fontSize: 12, fontWeight: 600 };
+          const line = { ifOverflow: 'extendDomain' as const, stroke: THRESHOLD_COLOR, strokeWidth: 2, strokeDasharray: '6 5', label };
+          return r.axis === 'y' && !horizontal ? <ReferenceLine key={r.label} y={r.value} {...line} /> : <ReferenceLine key={r.label} x={r.value} {...line} />;
+        })}
       </ComposedChart>
     );
   };
 
+  const toolBtn = 'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-testo-2 transition-colors hover:bg-primario-chiaro hover:text-primario';
   const body = (
-    <figure className="rounded-md border border-bordo bg-carta" aria-label={spec.title}>
-      <figcaption className="flex flex-wrap items-start justify-between gap-3 border-b border-bordo px-4 py-3">
+    <figure className="card overflow-hidden" aria-label={spec.title}>
+      <figcaption className="flex flex-wrap items-start justify-between gap-3 px-5 pb-1 pt-4">
         <div>
           <p className="font-semibold">{spec.title}</p>
-          {spec.subtitle && <p className="text-sm text-ardesia">{spec.subtitle}</p>}
+          {spec.subtitle && <p className="text-sm text-testo-2">{spec.subtitle}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-1" role="toolbar" aria-label="Opzioni del grafico">
           {view === 'chart' && (spec.allowedTypes ?? []).length > 1 && (
-            <div className="mr-2 inline-flex rounded border border-bordo" role="group" aria-label="Tipo di grafico">
+            <div className="mr-1 inline-flex rounded-full bg-fondo p-0.5" role="group" aria-label="Tipo di grafico">
               {spec.allowedTypes!.map((t) => (
                 <button
                   key={t}
                   type="button"
                   aria-pressed={type === t}
                   onClick={() => setType(t)}
-                  className={`px-2 py-1 text-sm first:rounded-l last:rounded-r ${type === t ? 'bg-container text-white' : 'hover:bg-container-chiaro'}`}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${type === t ? 'bg-superficie text-primario shadow-[var(--shadow-card)]' : 'text-testo-2 hover:text-testo'}`}
                 >
                   {CHART_TYPE_LABELS[t]}
                 </button>
               ))}
             </div>
           )}
-          <button type="button" onClick={() => setView(view === 'chart' ? 'table' : 'chart')} className="inline-flex items-center gap-1 rounded px-2 py-1 text-sm text-container hover:bg-container-chiaro">
+          <button type="button" onClick={() => setView(view === 'chart' ? 'table' : 'chart')} className={toolBtn}>
             {view === 'chart' ? <Table2 size={15} aria-hidden /> : <ChartLine size={15} aria-hidden />}
             {view === 'chart' ? 'Vedi dati' : 'Vedi grafico'}
           </button>
-          <button type="button" onClick={() => downloadCsv(`${slug(spec.title)}.csv`, toCsv(table.columns, table.rows))} className="inline-flex items-center gap-1 rounded px-2 py-1 text-sm text-container hover:bg-container-chiaro">
+          <button type="button" onClick={() => downloadCsv(`${slug(spec.title)}.csv`, toCsv(table.columns, table.rows))} className={toolBtn}>
             <Download size={15} aria-hidden /> Esporta CSV
           </button>
-          <button type="button" onClick={() => setFullscreen(!fullscreen)} aria-label={fullscreen ? 'Chiudi schermo intero' : 'Schermo intero'} className="rounded p-1.5 text-container hover:bg-container-chiaro">
+          <button type="button" onClick={() => setFullscreen(!fullscreen)} aria-label={fullscreen ? 'Chiudi schermo intero' : 'Schermo intero'} className={toolBtn}>
             {fullscreen ? <Minimize2 size={15} aria-hidden /> : <Maximize2 size={15} aria-hidden />}
           </button>
         </div>
       </figcaption>
       {view === 'table' ? (
-        <div className="p-3">
+        <div className="p-4">
           <DataTable spec={table} compact />
         </div>
       ) : (
-        <div className="px-2 pb-3 pt-4">
+        <div className="px-3 pb-4 pt-3">
           <div style={{ height: fullscreen ? '70vh' : 320 }}>
             <ResponsiveContainer width="100%" height="100%" initialDimension={initialDimension}>
               {renderChart()}
             </ResponsiveContainer>
           </div>
           {type !== 'pie' && spec.series.length > 1 && (
-            <ul className="mt-2 flex flex-wrap gap-2 px-2" aria-label="Serie del grafico">
+            <ul className="mt-3 flex flex-wrap gap-1.5 px-2" aria-label="Serie del grafico">
               {spec.series.map((s, i) => (
                 <li key={s.key}>
                   <button
                     type="button"
                     aria-pressed={!hidden.has(s.key)}
                     onClick={() => toggleSeries(s.key)}
-                    className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-sm ${hidden.has(s.key) ? 'text-ardesia line-through' : ''}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${hidden.has(s.key) ? 'border-bordo text-testo-2 line-through opacity-60' : 'border-bordo-tenue bg-fondo hover:border-bordo'}`}
                   >
-                    <span className="h-2.5 w-2.5 rounded-sm" style={{ background: seriesColor(i, s.color) }} aria-hidden />
+                    <span className="h-2 w-2 rounded-full" style={{ background: seriesColor(i, s.color) }} aria-hidden />
                     {s.label}
                   </button>
                 </li>
@@ -205,11 +220,11 @@ export function DataChart({ spec, initialDimension }: Props) {
             </ul>
           )}
           {type === 'pie' && (
-            <ul className="mt-2 flex flex-wrap gap-2 px-2" aria-label="Categorie">
+            <ul className="mt-3 flex flex-wrap gap-1.5 px-2" aria-label="Categorie">
               {spec.data.map((d, i) => (
-                <li key={i} className="inline-flex items-center gap-1.5 text-sm">
-                  <span className="h-2.5 w-2.5 rounded-sm" style={{ background: seriesColor(i) }} aria-hidden />
-                  {fmtX(d[spec.xKey])}: {fmtY(d[spec.series[0].key])}
+                <li key={i} className="inline-flex items-center gap-1.5 rounded-full bg-fondo px-2.5 py-1 text-xs font-medium">
+                  <span className="h-2 w-2 rounded-full" style={{ background: seriesColor(i) }} aria-hidden />
+                  {fmtX(d[spec.xKey])}: <span className="tabular-nums">{fmtY(d[spec.series[0].key])}</span>
                 </li>
               ))}
             </ul>
@@ -221,7 +236,7 @@ export function DataChart({ spec, initialDimension }: Props) {
 
   if (!fullscreen) return body;
   return (
-    <div role="dialog" aria-modal="true" aria-label={spec.title} className="fixed inset-0 z-50 flex items-center justify-center bg-inchiostro/60 p-6">
+    <div role="dialog" aria-modal="true" aria-label={spec.title} className="fixed inset-0 z-50 flex items-center justify-center bg-notte/55 p-6 backdrop-blur-[2px]">
       <div className="w-full max-w-6xl">{body}</div>
     </div>
   );

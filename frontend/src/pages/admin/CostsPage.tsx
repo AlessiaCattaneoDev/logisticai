@@ -23,7 +23,7 @@ function PricingForm() {
   const field = (key: keyof typeof form, label: string, type = 'text') => (
     <label className="text-sm">
       {label}
-      <input type={type} required={key !== 'cachedInputPer1M'} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="mt-1 block w-32 rounded border border-bordo px-2 py-1" />
+      <input type={type} required={key !== 'cachedInputPer1M'} value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="mt-1 block w-32 rounded-[10px] border border-bordo bg-superficie px-3 py-1.5 focus:border-primario focus:outline-none" />
     </label>
   );
   return (
@@ -34,9 +34,9 @@ function PricingForm() {
       {field('cachedInputPer1M', 'Cache $/1M')}
       {field('outputPer1M', 'Output $/1M')}
       {field('validoDal', 'Valido dal', 'date')}
-      <button type="submit" disabled={add.isPending} className="rounded bg-container px-3 py-1.5 text-sm text-white disabled:opacity-50">Aggiungi listino</button>
-      {add.isSuccess && <span role="status" className="text-sm text-esito-ok">Listino aggiunto.</span>}
-      {add.error && <span role="alert" className="text-sm text-esito-ko">{add.error instanceof ApiError ? add.error.message : 'Listino non salvato.'}</span>}
+      <button type="submit" disabled={add.isPending} className="h-9 rounded-[10px] bg-primario px-4 text-sm font-semibold text-white hover:bg-primario-scuro disabled:opacity-50">Aggiungi listino</button>
+      {add.isSuccess && <span role="status" className="text-sm text-ok">Listino aggiunto.</span>}
+      {add.error && <span role="alert" className="text-sm text-ko">{add.error instanceof ApiError ? add.error.message : 'Listino non salvato.'}</span>}
     </form>
   );
 }
@@ -77,11 +77,11 @@ export function CostsPage() {
           <div className="space-y-6">
             <Panel title="Modelli attivi">
               <dl className="grid gap-2 text-sm md:grid-cols-3">
-                <div><dt className="text-ardesia">Orchestratore</dt><dd className="font-mono">{data.modelliAttivi.orchestratore}</dd></div>
-                <div><dt className="text-ardesia">Data agent</dt><dd className="font-mono">{data.modelliAttivi.dataAgent}</dd></div>
-                <div><dt className="text-ardesia">Embedding</dt><dd className="font-mono">{data.modelliAttivi.embedding}</dd></div>
+                <div><dt className="text-testo-2">Orchestratore</dt><dd className="font-mono">{data.modelliAttivi.orchestratore}</dd></div>
+                <div><dt className="text-testo-2">Data agent</dt><dd className="font-mono">{data.modelliAttivi.dataAgent}</dd></div>
+                <div><dt className="text-testo-2">Embedding</dt><dd className="font-mono">{data.modelliAttivi.embedding}</dd></div>
               </dl>
-              <p className="mt-3 text-sm text-ardesia">
+              <p className="mt-3 text-sm text-testo-2">
                 Budget: {data.budget.giornalieroEur} € al giorno, {data.budget.mensileEur} € al mese. Cambio USD/EUR {data.budget.cambioUsdEur}.
               </p>
             </Panel>

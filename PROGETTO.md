@@ -339,8 +339,14 @@ backend/src/
 | `GET` | `/api/conversations` | operatore | Elenco delle **proprie** conversazioni |
 | `GET` | `/api/conversations/:id` | operatore | Messaggi di una propria conversazione |
 | `DELETE` | `/api/conversations/:id` | operatore | Archivia una propria conversazione |
-| `POST` | `/api/chat` | operatore | `{ conversationId?, message }` → **stream SSE** (§8.4) |
+| `POST` | `/api/chat` | operatore | `{ conversationId?, message, scope? }` → **stream SSE** (§8.4); `scope` = `{ type: 'document' \| 'category', id }` (§13.7) |
 | `POST` | `/api/messages/:id/feedback` | operatore | `{ rating: 'up' \| 'down', reason?, comment? }` |
+| `GET` | `/api/home` | operatore | Home: indicatori personali, conversazioni e documenti recenti; per l'admin costo di oggi, segnalazioni, servizi |
+| `GET` | `/api/categories` | operatore | Categorie della libreria con conteggi |
+| `POST` · `PATCH` | `/api/categories`, `/api/categories/:id` | admin | Crea o rinomina una categoria |
+| `GET` | `/api/documents?categoria=&q=` · `/api/documents/:id` | operatore | Documenti della libreria con stato |
+| `POST` | `/api/documents` | operatore | Caricamento multipart (`file`, `categoryId`, `title?`) → 202, elaborazione in coda |
+| `DELETE` | `/api/documents/:id` | autore o admin | Elimina file, riga e sezioni indicizzate |
 | `GET` | `/api/health` | pubblico | Stato di backend, DB, Chroma, data agent, provider LLM |
 | `*` | `/api/admin/*` | admin | API della dashboard (§14) |
 
@@ -738,9 +744,11 @@ Prompt finale: tradurre i numeri in **insight per un responsabile**: cosa emerge
 
 | Rotta | Accesso | Pagina |
 |---|---|---|
-| `/login` | pubblico | Login |
-| `/chat` · `/chat/:conversationId` | operatore | Chat con barra laterale delle conversazioni |
-| `/admin` | admin | Panoramica |
+| `/login` | pubblico | Login in due parti (pannello di marca e modulo) |
+| `/` | operatore | Home: dashboard personale (e indicatori admin) |
+| `/documenti` · `/documenti/:categoriaId` | operatore | Libreria per categorie, elenco documenti, caricamento |
+| `/chat` · `/chat/:conversationId` · `/chat?documento=ID` · `/chat?categoria=ID` | operatore | Chat con elenco conversazioni ed eventuale ambito |
+| `/admin` | admin | Dashboard |
 | `/admin/conversazioni` · `/admin/conversazioni/:id` | admin | Elenco conversazioni e dettaglio con trace |
 | `/admin/feedback` | admin | Risposte segnalate |
 | `/admin/costi` | admin | Costi, modelli, prezzi, budget |
@@ -795,10 +803,18 @@ Componenti **standard e riusabili**: gli stessi si usano in chat e nella dashboa
 - Sul 👎, motivi rapidi: *Risposta errata* · *Numeri sbagliati* · *Fonte non pertinente* · *Incompleta* · *Troppo lenta* · *Altro*, più un commento libero.
 
 ### 13.6 UX
-- Stile "operations dashboard": pulito, leggibile, palette blu/ardesia con un colore d'accento per gli alert SLA.
+- Identità visiva "Cargo": menu laterale blu notte, cobalto come colore principale, arancio container solo per soglie, notifiche, ambito attivo e documenti in analisi; font Instrument Sans; logo a due container impilati con il punto arancio della destinazione. Grafici con barre arrotondate, griglia leggera, tooltip a scheda e legenda a pillole.
+- Tutte le pagine (comprese quelle di amministrazione) stanno nello stesso guscio con il menu laterale, che mostra la sezione Amministrazione solo all'admin.
 - Responsive: utilizzabile anche da tablet in magazzino.
 - Errori mostrati nella bolla, con pulsante "Riprova".
 - I tipi condivisi (`ChatResponse`, eventi SSE, `ChartSpec`/`TableSpec`, DTO admin) stanno in `shared/types/`, importati sia dal front end sia dal back end.
+
+
+### 13.7 Libreria documenti e chat con ambito
+Progetto approvato in `docs/superpowers/specs/2026-10-12-piattaforma-completa-design.md`.
+- **Chi carica:** tutti gli utenti; il documento è subito visibile a tutti e l'assistente lo usa appena indicizzato. Elimina l'autore o l'admin. Categorie: 6 iniziali, l'admin ne crea e le rinomina.
+- **Elaborazione nel backend** (nessun nuovo servizio): controllo di estensione, firma reale del file e dimensione (15 MB), duplicati per checksum nella stessa categoria; estrazione del testo (PDF `unpdf`, Word `mammoth`, TXT, MD), sezioni per titoli o blocchi di paragrafi, embedding e scrittura in Chroma con `documentId` e `categoryId`. Stato `processing` → `ready` oppure `error` con il motivo (es. PDF scansionato). All'avvio si riprendono i documenti rimasti a metà.
+- **Chat con ambito:** "Chiedi a questo documento" (o a una categoria) apre la chat con un'etichetta arancio. L'orchestratore offre solo lo strumento documentale, il retriever filtra per documento o categoria e l'ambito resta salvato sulla conversazione. Fuori ambito l'assistente dice di non trovare l'informazione e propone di togliere il filtro.
 
 ---
 

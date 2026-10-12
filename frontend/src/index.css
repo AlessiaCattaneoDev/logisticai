@@ -1,48 +1,62 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
-/* Direzione visiva "documento di trasporto": carta su cemento, blu container, giallo segnaletica
-   solo per ciò che è vivo o è una soglia. */
+/* Identità "Cargo": blu notte per la navigazione, cobalto come colore principale,
+   arancio container solo per ciò che conta (soglie, notifiche, ambito attivo). */
 @theme {
-  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
 
-  --color-cemento: #eef0f2;
-  --color-carta: #ffffff;
-  --color-inchiostro: #1b2430;
-  --color-ardesia: #5b6676;
-  --color-bordo: #d5dae1;
-  --color-container: #1f4e8c;
-  --color-container-scuro: #173b6b;
-  --color-container-chiaro: #e7eef7;
-  --color-segnale: #e9b10c;
-  --color-segnale-chiaro: #fdf4d8;
-  --color-esito-ok: #2e7d4f;
-  --color-esito-ko: #c2362b;
+  --color-notte: #1c1a4a;
+  --color-notte-2: #262364;
+  --color-notte-3: #8487c2;
+  --color-primario: #3b5bfd;
+  --color-primario-scuro: #2a45d8;
+  --color-primario-chiaro: #eef1ff;
+  --color-primario-tenue: #c7d0ff;
+  --color-accento: #ff7a1a;
+  --color-accento-chiaro: #fff0e3;
+  --color-accento-scuro: #b4530c;
+  --color-fondo: #f5f6fa;
+  --color-superficie: #ffffff;
+  --color-testo: #14123a;
+  --color-testo-2: #6a6e91;
+  --color-bordo: #dde1f0;
+  --color-bordo-tenue: #eef0f7;
+  --color-ok: #1c7a47;
+  --color-ok-chiaro: #e3f7ec;
+  --color-ko: #d93b3b;
+  --color-ko-chiaro: #fde8e8;
+
+  --radius-card: 16px;
+  --shadow-card: 0 1px 2px rgb(20 18 58 / 0.05), 0 1px 1px rgb(20 18 58 / 0.03);
+  --shadow-pop: 0 12px 32px -8px rgb(20 18 58 / 0.25);
 }
 
 @layer base {
   html {
     font-family: var(--font-sans);
-    color: var(--color-inchiostro);
-    background: var(--color-cemento);
+    color: var(--color-testo);
+    background: var(--color-fondo);
     -webkit-font-smoothing: antialiased;
   }
-  h1,
-  h2,
-  h3 {
-    font-stretch: 87.5%;
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
   }
   :focus-visible {
-    outline: 2px solid var(--color-container);
+    outline: 2px solid var(--color-primario);
     outline-offset: 2px;
   }
 }
 
+@utility card {
+  background: var(--color-superficie);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }

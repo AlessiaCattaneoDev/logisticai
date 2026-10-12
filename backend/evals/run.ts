@@ -3,7 +3,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { config as loadDotenv } from 'dotenv';
-import type { ChatResponse } from '@logisticai/shared';
+import type { ChatRequest, ChatResponse, DocumentCategoryDto, DocumentDto } from '@logisticai/shared';
 import { CASES, type EvalCase } from './cases.js';
 
 loadDotenv({ path: resolve(import.meta.dirname, '../../.env'), quiet: true });
@@ -19,8 +19,23 @@ async function login(): Promise<string> {
   return res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
 }
 
-async function ask(cookie: string, domanda: string): Promise<ChatResponse> {
-  const res = await fetch(`${BASE}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookie }, body: JSON.stringify({ message: domanda }) });
+/** Converte l'ambito del caso (titolo del documento o nome della categoria) negli id del sistema in esecuzione. */
+async function resolveScope(cookie: string, ambito: EvalCase['ambito']): Promise<ChatRequest['scope']> {
+  if (!ambito) return undefined;
+  const get = async <T>(path: string) => (await (await fetch(`${BASE}${path}`, { headers: { Cookie: cookie } })).json()) as T;
+  if ('documento' in ambito) {
+    const docs = await get<DocumentDto[]>(`/api/documents?q=${encodeURIComponent(ambito.documento)}`);
+    const d = docs.find((x) => x.title === ambito.documento && x.status === 'ready');
+    if (!d) throw new Error(`Documento "${ambito.documento}" non disponibile: esegui npm run ingest`);
+    return { type: 'document', id: d.id };
+  }
+  const c = (await get<DocumentCategoryDto[]>('/api/categories')).find((x) => x.name === ambito.categoria);
+  if (!c) throw new Error(`Categoria "${ambito.categoria}" non trovata`);
+  return { type: 'category', id: c.id };
+}
+
+async function ask(cookie: string, domanda: string, scope?: ChatRequest['scope']): Promise<ChatResponse> {
+  const res = await fetch(`${BASE}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookie }, body: JSON.stringify({ message: domanda, ...(scope ? { scope } : {}) }) });
   const text = await res.text();
   for (const block of text.trim().split('\n\n')) {
     const [ev, data] = block.split('\n');
@@ -34,6 +49,7 @@ function check(c: EvalCase, r: ChatResponse): string[] {
   const problems: string[] = [];
   const used = r.toolsUsed.filter((t) => t.ok).map((t) => t.name);
   if (c.nessunoStrumento && r.toolsUsed.length) problems.push(`non doveva usare strumenti, ha usato ${used.join(', ')}`);
+  if (c.ambito && r.toolsUsed.some((t) => t.name === 'analizza_dati')) problems.push('con un ambito non deve analizzare i dati');
   let pos = 0;
   for (const t of c.strumenti) {
     const i = used.indexOf(t, pos);
@@ -54,7 +70,7 @@ const rows: { id: string; categoria: string; ok: boolean; problemi: string[]; se
 for (const c of cases) {
   const started = Date.now();
   try {
-    const r = await ask(cookie, c.domanda);
+    const r = await ask(cookie, c.domanda, await resolveScope(cookie, c.ambito));
     const problemi = check(c, r);
     rows.push({ id: c.id, categoria: c.categoria, ok: problemi.length === 0, problemi, secondi: (Date.now() - started) / 1000, costEur: r.usage.costEur, strumenti: r.toolsUsed.map((t) => t.name + (t.ok ? '' : '(rinviato/errore)')).join(' > '), risposta: r.reply });
   } catch (err) {

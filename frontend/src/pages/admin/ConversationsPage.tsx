@@ -27,35 +27,35 @@ export function ConversationsPage() {
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cerca nel testo" aria-label="Cerca nelle conversazioni" className="w-64 rounded border border-bordo px-3 py-1.5" />
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={onlyDown} onChange={(e) => setOnlyDown(e.target.checked)} /> Solo con risposte segnalate</label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={onlyErrors} onChange={(e) => setOnlyErrors(e.target.checked)} /> Solo con errori</label>
-        <button type="button" onClick={() => (names.revealed ? names.hide() : void names.reveal())} className="ml-auto inline-flex items-center gap-1.5 rounded border border-bordo bg-carta px-3 py-1.5 text-sm">
+        <button type="button" onClick={() => (names.revealed ? names.hide() : void names.reveal())} className="ml-auto inline-flex items-center gap-1.5 rounded-[10px] border border-bordo bg-superficie px-3 py-1.5 text-sm font-medium hover:border-primario hover:text-primario">
           {names.revealed ? <EyeOff size={15} aria-hidden /> : <Eye size={15} aria-hidden />}
           {names.revealed ? 'Nascondi nomi' : 'Mostra nomi'}
         </button>
       </div>
       <QueryState isLoading={isLoading} error={error}>
-        <div className="overflow-x-auto rounded-md border border-bordo bg-carta">
+        <div className="card overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-cemento text-left">
+            <thead className="bg-fondo text-left text-xs text-testo-2">
               <tr>
                 {['Conversazione', 'Utente', 'Aggiornata', 'Messaggi', 'Strumenti', 'Segnalazioni', 'Errori', 'Costo'].map((h) => (
-                  <th key={h} scope="col" className={`px-3 py-2 font-semibold ${['Messaggi', 'Segnalazioni', 'Errori', 'Costo'].includes(h) ? 'text-right' : ''}`}>{h}</th>
+                  <th key={h} scope="col" className={`px-4 py-2.5 font-semibold ${['Messaggi', 'Segnalazioni', 'Errori', 'Costo'].includes(h) ? 'text-right' : ''}`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {data.map((c) => (
-                <tr key={c.id} className="border-t border-bordo/70">
-                  <td className="max-w-xs truncate px-3 py-2"><Link to={`/admin/conversazioni/${c.id}`} className="text-container hover:underline">{c.titolo}</Link></td>
-                  <td className="whitespace-nowrap px-3 py-2">{names.label(c.utente)}</td>
-                  <td className="whitespace-nowrap px-3 py-2">{new Date(c.aggiornata).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{c.messaggi}</td>
-                  <td className="px-3 py-2">{c.strumenti.map((t) => TOOL_LABEL[t] ?? t).join(', ') || 'Nessuno'}</td>
-                  <td className={`px-3 py-2 text-right tabular-nums ${c.feedbackNegativi ? 'font-semibold text-esito-ko' : ''}`}>{c.feedbackNegativi}</td>
-                  <td className={`px-3 py-2 text-right tabular-nums ${c.errori ? 'font-semibold text-esito-ko' : ''}`}>{c.errori}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">{formatValue(c.costoEur, 'currency_eur')}</td>
+                <tr key={c.id} className="border-t border-bordo-tenue hover:bg-fondo/60">
+                  <td className="max-w-xs truncate px-4 py-2.5"><Link to={`/admin/conversazioni/${c.id}`} className="font-medium text-primario hover:underline">{c.titolo}</Link></td>
+                  <td className="whitespace-nowrap px-4 py-2.5">{names.label(c.utente)}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5">{new Date(c.aggiornata).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{c.messaggi}</td>
+                  <td className="px-4 py-2.5">{c.strumenti.map((t) => TOOL_LABEL[t] ?? t).join(', ') || 'Nessuno'}</td>
+                  <td className={`px-4 py-2.5 text-right tabular-nums ${c.feedbackNegativi ? 'font-semibold text-ko' : ''}`}>{c.feedbackNegativi}</td>
+                  <td className={`px-4 py-2.5 text-right tabular-nums ${c.errori ? 'font-semibold text-ko' : ''}`}>{c.errori}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{formatValue(c.costoEur, 'currency_eur')}</td>
                 </tr>
               ))}
-              {data.length === 0 && <tr><td colSpan={8} className="px-3 py-6 text-center text-ardesia">Nessuna conversazione con questi filtri.</td></tr>}
+              {data.length === 0 && <tr><td colSpan={8} className="px-3 py-6 text-center text-testo-2">Nessuna conversazione con questi filtri.</td></tr>}
             </tbody>
           </table>
         </div>

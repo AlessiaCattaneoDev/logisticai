@@ -3,7 +3,7 @@ import type { ToolName } from '@logisticai/shared';
 
 export interface EvalCase {
   id: string;
-  categoria: 'rag' | 'dati' | 'ibrida' | 'robustezza';
+  categoria: 'rag' | 'dati' | 'ibrida' | 'robustezza' | 'ambito';
   domanda: string;
   /** Strumenti che devono comparire, nell'ordine indicato (altri possono esserci in mezzo). */
   strumenti: ToolName[];
@@ -13,6 +13,8 @@ export interface EvalCase {
   nonDeveContenere?: RegExp[];
   fonte?: RegExp;
   minArtifact?: number;
+  /** Chat limitata a un documento (per titolo) o a una categoria (per nome): mai l'analisi dati. */
+  ambito?: { documento: string } | { categoria: string };
 }
 
 export const CASES: EvalCase[] = [
@@ -32,5 +34,8 @@ export const CASES: EvalCase[] = [
   { id: 'ibrida-sms-giacenze', categoria: 'ibrida', domanda: 'Il preavviso SMS introdotto nel 2025 ha ridotto le giacenze per destinatario assente come previsto dalla procedura?', strumenti: ['cerca_knowledge_base', 'analizza_dati'], deveContenere: [/sì|si,|ridott|calat|diminu/i, /30\s?%|4\d\s?%/], fonte: /giacenze/i },
   { id: 'robustezza-fuori-ambito', categoria: 'robustezza', domanda: 'Qual è la capitale della Francia?', strumenti: [], nessunoStrumento: true, deveContenere: [/spedizion|logistic|Padana/i], nonDeveContenere: [/Parigi/i] },
   { id: 'robustezza-non-in-kb', categoria: 'robustezza', domanda: 'Qual è la policy sulle ferie dei magazzinieri?', strumenti: ['cerca_knowledge_base'], deveContenere: [/non (trovo|è|sono|risulta|contiene)|ufficio del personale/i] },
+  { id: 'ambito-documento-sla', categoria: 'ambito', ambito: { documento: 'Schede SLA per cliente' }, domanda: 'Qual è la soglia di puntualità di ModaNova e quanto vale la penale per ogni punto sotto soglia?', strumenti: ['cerca_knowledge_base'], deveContenere: [/95\s?%/, /1\.?000(,00)?\s?€|€\s?1\.?000/], fonte: /Schede SLA per cliente/ },
+  { id: 'ambito-categoria-giacenze', categoria: 'ambito', ambito: { categoria: 'Reclami e giacenze' }, domanda: 'Quanto costa la giacenza al cliente?', strumenti: ['cerca_knowledge_base'], deveContenere: [/5(,00)? ?€|€ ?5/], fonte: /giacenze/i },
+  { id: 'ambito-fuori-documento', categoria: 'ambito', ambito: { documento: 'Procedure di magazzino' }, domanda: 'ModaNova ha diritto a penali per settembre 2026?', strumenti: [], deveContenere: [/non (trovo|è|sono|risulta|contiene|posso|riesco)|togli|ambito/i], nonDeveContenere: [/1\.?700/] },
   { id: 'robustezza-qualita-dati', categoria: 'robustezza', domanda: 'Quanto sono sporchi i dati delle spedizioni? Che pulizia hai fatto?', strumenti: ['analizza_dati'], deveContenere: [/duplicat/i, /240/] },
 ];

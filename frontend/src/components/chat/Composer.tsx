@@ -1,7 +1,7 @@
 import { SendHorizontal } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 
-export function Composer({ disabled, onSend }: { disabled: boolean; onSend: (text: string) => void }) {
+export function Composer({ disabled, onSend, placeholder }: { disabled: boolean; onSend: (text: string) => void; placeholder?: string }) {
   const [text, setText] = useState('');
   const submit = () => {
     if (!text.trim() || disabled) return;
@@ -20,7 +20,7 @@ export function Composer({ disabled, onSend }: { disabled: boolean; onSend: (tex
         e.preventDefault();
         submit();
       }}
-      className="flex items-end gap-2 rounded-md border border-bordo bg-carta p-2 focus-within:border-container"
+      className="flex items-end gap-2 rounded-2xl border border-bordo bg-superficie p-2 shadow-[var(--shadow-card)] transition-shadow focus-within:border-primario focus-within:ring-4 focus-within:ring-primario/10"
     >
       <label htmlFor="composer" className="sr-only">Scrivi una domanda</label>
       <textarea
@@ -30,10 +30,10 @@ export function Composer({ disabled, onSend }: { disabled: boolean; onSend: (tex
         onKeyDown={onKey}
         rows={Math.min(6, Math.max(1, text.split('\n').length))}
         maxLength={4000}
-        placeholder="Chiedi di un contratto, di una procedura o dei dati delle spedizioni"
-        className="flex-1 resize-none bg-transparent px-2 py-1.5 outline-none"
+        placeholder={placeholder ?? 'Chiedi di un contratto, di una procedura o dei dati delle spedizioni'}
+        className="flex-1 resize-none bg-transparent px-2 py-2 outline-none placeholder:text-testo-2/70"
       />
-      <button type="submit" disabled={disabled || !text.trim()} className="inline-flex items-center gap-1 rounded bg-container px-3 py-2 text-sm font-medium text-white hover:bg-container-scuro disabled:opacity-40">
+      <button type="submit" disabled={disabled || !text.trim()} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-primario px-4 text-sm font-semibold text-white transition-colors hover:bg-primario-scuro disabled:opacity-40">
         <SendHorizontal size={16} aria-hidden /> Invia
       </button>
     </form>

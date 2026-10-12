@@ -14,6 +14,19 @@ MOTIVI_NOTI = {"Traffico", "Meteo avverso", "Picco volumi hub", "Mezzo guasto",
                "Ritardo subvettore", "Destinatario assente", "Indirizzo errato"}
 
 
+def come_frazione(valore: float, nome: str) -> float:
+    """Accetta soglie scritte come frazione (0.95) o come percentuale (95): restituisce sempre la frazione.
+
+    Dal vivo l'agente ha passato soglia=95 al posto di 0.95, ottenendo una penale enorme: la
+    conversione rende quell'errore impossibile.
+    """
+    # Da 1 in su è una percentuale: "1" significa 1% (nessuno SLA o soglia reale vale 100%).
+    frazione = valore / 100 if valore >= 1 else valore
+    if not 0 < frazione <= 1:
+        raise ValueError(f"{nome}={valore} non valido: usa una frazione (es. 0.95) o una percentuale (es. 95)")
+    return frazione
+
+
 def _groups(raggruppa_per: str | list[str] | None) -> list[str]:
     if raggruppa_per is None:
         return []
@@ -65,6 +78,8 @@ def calcola_penale(
     volume_minimo: int = 0,
 ) -> dict:
     """Penale SLA: punti sotto soglia (arrotondati a un decimale) x importo per punto, fino al tetto."""
+    soglia = come_frazione(soglia, "soglia")
+    puntualita = come_frazione(puntualita, "puntualita") if puntualita > 1 else puntualita  # 1.0 = tutte puntuali
     if spedizioni < volume_minimo:
         return {"punti_sotto_soglia": 0.0, "penale_eur": 0.0, "applicata": False,
                 "nota": f"volume di {spedizioni} spedizioni sotto il minimo di {volume_minimo}: penale non applicabile"}
@@ -107,6 +122,7 @@ def verifica_sla_mensile(
 
     Unico modo affidabile per calcolare una penale: filtro, esclusioni e formula sono sempre gli stessi.
     """
+    soglia = come_frazione(soglia, "soglia")
     righe = d[(d["cliente"] == cliente) & (d["mese_previsto"] == mese)]
     if righe.empty:
         raise ValueError(f"nessuna spedizione per {cliente} nel mese {mese}")
@@ -138,6 +154,8 @@ def valuta_subvettori(
     esito = 'sospensione' se il tasso supera soglia_sospensione per almeno `mesi_consecutivi` mesi di fila,
     'piano di miglioramento' se supera soglia_piano in almeno un mese, altrimenti 'conforme'.
     """
+    soglia_piano = come_frazione(soglia_piano, "soglia_piano")
+    soglia_sospensione = come_frazione(soglia_sospensione, "soglia_sospensione")
     periodo = d
     if da_mese:
         periodo = periodo[periodo["mese_previsto"] >= da_mese]

@@ -148,3 +148,27 @@ def test_valuta_subvettori_2026(cleaned):
     assert r.loc["PAD", "esito"] == "conforme"
     assert (r.drop("VLX")["esito"] != "sospensione").all()
     assert r.index[0] == "VLX"  # i casi più gravi in cima
+
+
+def test_soglie_in_percentuale_o_frazione_danno_lo_stesso_risultato(cleaned):
+    """Regressione dal vivo: soglia=95 al posto di 0.95 produceva una penale di 5.000 € invece di 1.700 €."""
+    d, _ = cleaned
+    a = verifica_sla_mensile(d, "ModaNova", "2026-09", **REGOLE_MODANOVA)
+    b = verifica_sla_mensile(d, "ModaNova", "2026-09", **{**REGOLE_MODANOVA, "soglia": 95})
+    assert a == {**b, "soglia": a["soglia"]}
+    assert b["penale_eur"] == 1700.0
+    assert calcola_penale(93.27, soglia=95, penale_per_punto=1000, tetto=5000, spedizioni=109)["penale_eur"] == 1700.0
+
+
+def test_soglie_vettori_in_percentuale(cleaned):
+    d, _ = cleaned
+    a = valuta_subvettori(d, 0.01, 0.02, 2, da_mese="2026-01")
+    b = valuta_subvettori(d, 1, 2, 2, da_mese="2026-01")
+    pd.testing.assert_frame_equal(a, b)
+
+
+@pytest.mark.parametrize("soglia", [0, -5, 150])
+def test_soglie_impossibili_rifiutate(cleaned, soglia):
+    d, _ = cleaned
+    with pytest.raises(ValueError, match="soglia"):
+        verifica_sla_mensile(d, "ModaNova", "2026-09", **{**REGOLE_MODANOVA, "soglia": soglia})

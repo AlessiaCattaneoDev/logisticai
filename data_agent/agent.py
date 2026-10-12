@@ -44,6 +44,8 @@ Regole obbligatorie:
    - tasso_danni(d, raggruppa_per=...) -> colonne: [gruppi..., consegnate, danni, tasso_danni]  (frazione 0-1)
    - margine(d, raggruppa_per=...) -> colonne: [gruppi..., spedizioni, ricavo_eur, costo_eur, margine_eur, margine_pct]
    OBBLIGATORI per le domande che diventano decisioni (non riscriverne la logica a mano):
+   Soglie e percentuali si passano come frazione (0.95, 0.02); le cause escluse sono SOLO valori di motivo_ritardo
+   (le spedizioni In transito sono già escluse automaticamente).
    - PENALI SLA: verifica_sla_mensile(d, cliente, mese='AAAA-MM', soglia, penale_per_punto, tetto, volume_minimo, cause_escluse=[...])
      -> dict: spedizioni, escluse, misurate, puntuali, puntualita, punti_sotto_soglia, penale_eur, applicata, nota
    - SOSPENSIONE / QUALIFICA SUBVETTORI: valuta_subvettori(d, soglia_piano, soglia_sospensione, mesi_consecutivi, da_mese=None, a_mese=None)

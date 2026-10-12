@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { chunkMarkdown, MAX_CHUNK_CHARS } from '../src/rag/chunker';
-import { assertEmbeddingModelMatches, deriveClienti, ingestKnowledgeBase } from '../src/rag/ingest';
+import { assertEmbeddingModelMatches, deriveClienti, ingestKnowledgeBase, isKbSource } from '../src/rag/ingest';
 import { Retriever } from '../src/rag/retriever';
 import { InMemoryVectorStore } from '../src/rag/vectorStore';
 import { FakeEmbedder } from './helpers/fakeEmbedder';
@@ -40,6 +40,15 @@ describe('chunker', () => {
     const chunks = chunkMarkdown('x.md', long);
     expect(chunks.length).toBeGreaterThan(1);
     for (const c of chunks) expect(c.text.length).toBeLessThan(MAX_CHUNK_CHARS + 400);
+  });
+});
+
+describe('sorgenti della knowledge base', () => {
+  it('ignora copie duplicate e file estranei', () => {
+    expect(isKbSource('04_schede_sla_clienti.md')).toBe(true);
+    expect(isKbSource('04_schede_sla_clienti 2.md')).toBe(false);
+    expect(isKbSource('README.md')).toBe(false);
+    expect(isKbSource('.~lock.md')).toBe(false);
   });
 });
 

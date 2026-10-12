@@ -12,9 +12,12 @@ export interface IngestResult {
 
 const BATCH = 64;
 
+/** Solo sorgenti "NN_nome.md": ignora copie come "01_documento 2.md" create da iCloud o dal Finder. */
+export const isKbSource = (file: string) => /^\d{2}_[a-z0-9_]+\.md$/.test(file);
+
 /** I clienti sono i titoli ## del documento con le schede SLA (esclusa la sezione delle regole comuni). */
 export function deriveClienti(sourceDir: string): string[] {
-  const file = readdirSync(sourceDir).find((f) => /schede_sla/.test(f));
+  const file = readdirSync(sourceDir).find((f) => isKbSource(f) && /schede_sla/.test(f));
   if (!file) return [];
   return readFileSync(join(sourceDir, file), 'utf8')
     .split('\n')
@@ -28,7 +31,7 @@ export async function ingestKnowledgeBase(opts: {
   embedder: EmbeddingProvider;
   store: VectorStore;
 }): Promise<IngestResult> {
-  const files = readdirSync(opts.sourceDir).filter((f) => f.endsWith('.md')).sort();
+  const files = readdirSync(opts.sourceDir).filter(isKbSource).sort();
   const clienti = deriveClienti(opts.sourceDir);
   const chunks = files.flatMap((f) => chunkMarkdown(f, readFileSync(join(opts.sourceDir, f), 'utf8'), clienti));
   await opts.store.reset({

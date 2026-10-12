@@ -22,6 +22,8 @@ export async function resetDb(prisma: PrismaClient): Promise<void> {
     prisma.message.deleteMany(),
     prisma.conversation.deleteMany(),
     prisma.modelPricing.deleteMany(),
+    prisma.document.deleteMany(),
+    prisma.documentCategory.deleteMany(),
     prisma.setting.deleteMany(),
     prisma.user.deleteMany(),
   ]);

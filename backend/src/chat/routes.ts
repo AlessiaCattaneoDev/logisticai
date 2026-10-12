@@ -2,11 +2,12 @@ import { Router, type RequestHandler, type Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { FEEDBACK_REASONS, type ChatStreamEvent } from '@logisticai/shared';
-import { NotFoundError, type ChatService } from './service.js';
+import { NotFoundError, ScopeError, type ChatService } from './service.js';
 
 const chatSchema = z.object({
   conversationId: z.uuid().optional(),
   message: z.string().trim().min(1).max(4000),
+  scope: z.object({ type: z.enum(['document', 'category']), id: z.string().min(1) }).optional(),
 });
 
 const feedbackSchema = z.object({
@@ -33,20 +34,22 @@ export function chatRouter(service: ChatService, requireAuth: RequestHandler, li
     const parsed = chatSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Messaggio non valido (1-4000 caratteri)' });
     const userId = req.user!.id;
-    let conversationId: string;
+    let conversation: Awaited<ReturnType<ChatService['resolveConversation']>>;
     try {
-      conversationId = (await service.resolveConversation(userId, parsed.data.conversationId, parsed.data.message)).id;
+      conversation = await service.resolveConversation(userId, parsed.data.conversationId, parsed.data.message, parsed.data.scope);
     } catch (err) {
       if (err instanceof NotFoundError) return res.status(404).json({ error: err.message });
+      if (err instanceof ScopeError) return res.status(400).json({ error: err.message });
       throw err;
     }
+    const conversationId = conversation.id;
 
     res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
     const abort = new AbortController();
     res.on('close', () => {
       if (!res.writableEnded) abort.abort();
     });
-    for await (const event of service.handle({ userId, conversationId, message: parsed.data.message, signal: abort.signal })) {
+    for await (const event of service.handle({ userId, conversationId, message: parsed.data.message, signal: abort.signal, scope: conversation.scope })) {
       if (abort.signal.aborted) break;
       sse(res, event);
     }

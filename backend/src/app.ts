@@ -10,6 +10,9 @@ import { authRouter, type AuthConfig } from './auth/routes.js';
 import { chatRouter } from './chat/routes.js';
 import type { ChatService } from './chat/service.js';
 import type { PrismaClient } from './db/client.js';
+import { documentRoutes } from './documents/routes.js';
+import type { DocumentService } from './documents/service.js';
+import type { HomeService } from './home/service.js';
 
 export type HealthCheck = () => Promise<boolean>;
 
@@ -20,6 +23,8 @@ export interface AppDeps {
   auth: AuthConfig;
   chat?: { service: ChatService; rateLimit?: { windowMs: number; limit: number } };
   admin?: AdminService;
+  documents?: { service: DocumentService; maxBytes?: number };
+  home?: HomeService;
 }
 
 async function runCheck(check: HealthCheck): Promise<ServiceStatus> {
@@ -57,6 +62,17 @@ export function createApp(deps: AppDeps): Express {
   app.use('/api/auth', authRouter(deps.prisma, deps.auth, authenticated));
 
   if (deps.chat) app.use('/api', chatRouter(deps.chat.service, authenticated, deps.chat.rateLimit));
+  if (deps.home) {
+    const home = deps.home;
+    app.get('/api/home', authenticated, async (req, res, next) => {
+      try {
+        res.json(await home.get(req.user!));
+      } catch (err) {
+        next(err);
+      }
+    });
+  }
+  if (deps.documents) app.use('/api', documentRoutes(deps.documents.service, authenticated, deps.documents.maxBytes));
 
   const admin = express.Router();
   admin.use(authenticated, requireAdmin);

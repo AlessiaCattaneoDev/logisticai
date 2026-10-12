@@ -1,6 +1,6 @@
 // Loop ReAct: l'LLM ragiona, sceglie gli strumenti (anche in catena), osserva i risultati e risponde.
 import { randomUUID } from 'node:crypto';
-import type { Artifact, ChatStreamEvent, DataAgentDetails, Source, ToolName, ToolUsage } from '@logisticai/shared';
+import type { Artifact, ChatScope, ChatStreamEvent, DataAgentDetails, Source, ToolName, ToolUsage } from '@logisticai/shared';
 import type { LLMProvider, LLMUsage, NeutralMessage, ToolCallRequest } from '../llm/types.js';
 import type { RetrievalResult } from '../rag/retriever.js';
 import type { AnalyzeInput, AnalyzeOutput } from '../services/dataAgentClient.js';
@@ -41,7 +41,7 @@ export interface OrchestratorDeps {
   llm: LLMProvider;
   model: string;
   systemPrompt: string;
-  retriever: { search(query: string, opts: { cliente?: string; topK?: number }): Promise<RetrievalResult> };
+  retriever: { search(query: string, opts: { cliente?: string; topK?: number; filtro?: { documentId?: string; categoryId?: string } }): Promise<RetrievalResult> };
   dataAgent: { analyze(input: AnalyzeInput, ctx: { userId: string; requestId?: string; signal?: AbortSignal }): Promise<AnalyzeOutput> };
   maxIterations?: number;
   reasoningEffort?: 'low' | 'medium' | 'high';
@@ -53,6 +53,15 @@ export interface RunInput {
   userId: string;
   requestId?: string;
   signal?: AbortSignal;
+  /** Chat limitata a un documento o a una categoria: solo ricerca documentale filtrata. */
+  scope?: ChatScope;
+}
+
+/** Istruzioni aggiunte al system prompt quando la chat ha un ambito (restano fisse per tutto il turno). */
+export function scopeInstructions(scope: ChatScope): string {
+  const cosa = scope.type === 'document' ? `il documento "${scope.label}"` : `i documenti della categoria "${scope.label}"`;
+  return `\n\nAMBITO DI QUESTA CONVERSAZIONE: rispondi usando SOLO ${cosa}. La ricerca è già limitata a questo ambito. ` +
+    `Se la risposta non è nell'ambito, dillo e suggerisci di togliere il filtro per cercare in tutta la knowledge base e nei dati.`;
 }
 
 const MAX_TOOL_RESULT_CHARS = 12_000;
@@ -80,9 +89,9 @@ export class Orchestrator {
       let result;
       for await (const ev of this.deps.llm.chatStream({
         model: this.deps.model,
-        system: this.deps.systemPrompt,
+        system: input.scope ? this.deps.systemPrompt + scopeInstructions(input.scope) : this.deps.systemPrompt,
         messages,
-        tools: TOOL_DEFINITIONS,
+        tools: input.scope ? TOOL_DEFINITIONS.filter((t) => t.name === 'cerca_knowledge_base') : TOOL_DEFINITIONS,
         reasoningEffort: this.deps.reasoningEffort,
         signal: input.signal,
       })) {
@@ -169,7 +178,8 @@ export class Orchestrator {
     try {
       if (tool === 'cerca_knowledge_base') {
         const args = toolArgs.cerca_knowledge_base.parse(call.args);
-        const res = await this.deps.retriever.search(args.query, { cliente: args.cliente, topK: args.top_k });
+        const filtro = input.scope ? (input.scope.type === 'document' ? { documentId: input.scope.id } : { categoryId: input.scope.id }) : undefined;
+        const res = await this.deps.retriever.search(args.query, { cliente: input.scope?.type === 'document' ? undefined : args.cliente, topK: args.top_k, ...(filtro ? { filtro } : {}) });
         outcome.llmCalls.push({
           component: 'embedding', provider: res.embedding.provider, model: res.embedding.model,
           usage: { inputTokens: res.embedding.inputTokens, outputTokens: 0, cachedInputTokens: 0 }, latencyMs: res.embedding.latencyMs, ok: true,
@@ -185,6 +195,9 @@ export class Orchestrator {
         return finish(true, content, res.trovato ? `${res.risultati.length} estratti` : 'nessun estratto pertinente');
       }
 
+      if (input.scope) {
+        return finish(false, "In questa conversazione puoi consultare solo l'ambito selezionato: l'analisi dei dati non è disponibile.", 'non disponibile nell’ambito', 'ambito');
+      }
       const args = toolArgs.analizza_dati.parse(call.args);
       const res = await this.deps.dataAgent.analyze(args, { userId: input.userId, requestId, signal: input.signal });
       for (const u of res.usage) {

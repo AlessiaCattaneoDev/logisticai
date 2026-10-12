@@ -11,16 +11,27 @@ export interface QueryHit extends StoredChunk {
   distance: number;
 }
 
+/** Filtro sui metadati: più chiavi = tutte devono valere (AND). */
+export type MetadataFilter = Record<string, string>;
+
 export interface VectorStore {
   reset(collectionMetadata: Record<string, string>): Promise<void>;
+  /** Crea la collection se non esiste (primo caricamento prima di qualsiasi ingest). */
+  ensure(collectionMetadata: Record<string, string>): Promise<void>;
+  deleteWhere(where: MetadataFilter): Promise<void>;
   add(chunks: StoredChunk[], embeddings: number[][]): Promise<void>;
-  query(embedding: number[], topK: number, where?: Record<string, string>): Promise<QueryHit[]>;
+  query(embedding: number[], topK: number, where?: MetadataFilter): Promise<QueryHit[]>;
   info(): Promise<{ count: number; metadata: Record<string, string> } | null>;
   healthy(): Promise<boolean>;
   drop(): Promise<void>;
 }
 
 /** Implementazione su ChromaDB (server locale avviato con `chroma run`). */
+const chromaWhere = (where: MetadataFilter) => {
+  const entries = Object.entries(where);
+  return entries.length === 1 ? where : { $and: entries.map(([k, v]) => ({ [k]: v })) };
+};
+
 export class ChromaVectorStore implements VectorStore {
   private readonly client: ChromaClient;
 
@@ -54,6 +65,15 @@ export class ChromaVectorStore implements VectorStore {
     if (await this.collection()) await this.client.deleteCollection({ name: this.name });
   }
 
+  async ensure(collectionMetadata: Record<string, string>): Promise<void> {
+    if (!(await this.collection())) await this.reset(collectionMetadata);
+  }
+
+  async deleteWhere(where: MetadataFilter): Promise<void> {
+    const col = await this.collection();
+    if (col) await col.delete({ where: chromaWhere(where) as never });
+  }
+
   async add(chunks: StoredChunk[], embeddings: number[][]): Promise<void> {
     const col = await this.collection();
     if (!col) throw new Error(`Collection ${this.name} inesistente: esegui npm run ingest`);
@@ -63,7 +83,7 @@ export class ChromaVectorStore implements VectorStore {
   async query(embedding: number[], topK: number, where?: Record<string, string>): Promise<QueryHit[]> {
     const col = await this.collection();
     if (!col) throw new Error(`Collection ${this.name} inesistente: esegui npm run ingest`);
-    const res = await col.query({ queryEmbeddings: [embedding], nResults: topK, ...(where ? { where } : {}) });
+    const res = await col.query({ queryEmbeddings: [embedding], nResults: topK, ...(where && Object.keys(where).length ? { where: chromaWhere(where) as never } : {}) });
     return res.ids[0].map((id, i) => ({
       id,
       text: res.documents[0][i] ?? '',
@@ -127,5 +147,13 @@ export class InMemoryVectorStore implements VectorStore {
   async drop() {
     this.rows = [];
     this.meta = null;
+  }
+
+  async ensure(collectionMetadata: Record<string, string>) {
+    if (!this.meta) this.meta = collectionMetadata;
+  }
+
+  async deleteWhere(where: MetadataFilter) {
+    this.rows = this.rows.filter((r) => !Object.entries(where).every(([k, v]) => r.chunk.metadata[k] === v));
   }
 }

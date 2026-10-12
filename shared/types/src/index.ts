@@ -41,6 +41,7 @@ export interface ResponseUsage {
 export interface ChatRequest {
   conversationId?: string;
   message: string;
+  scope?: { type: 'document' | 'category'; id: string };
 }
 
 export interface ChatResponse {
@@ -95,6 +96,7 @@ export interface ConversationSummary {
   id: string;
   title: string;
   updatedAt: string;
+  scope?: import('./platform.js').ChatScope;
 }
 
 export interface StoredMessage {
@@ -114,3 +116,4 @@ export interface ConversationDetail extends ConversationSummary {
   messages: StoredMessage[];
 }
 export * from './admin.js';
+export * from './platform.js';

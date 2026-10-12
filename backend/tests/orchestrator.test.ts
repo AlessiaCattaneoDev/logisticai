@@ -208,3 +208,46 @@ describe('system prompt', () => {
     expect(p).not.toContain(String.fromCharCode(0x2014));
   });
 });
+
+describe('chat con ambito', () => {
+  const scope = { type: 'document' as const, id: 'doc-1', label: 'Procedura reclami e danni' };
+
+  it('offre solo la ricerca documentale, filtrata sul documento, e dichiara l’ambito', async () => {
+    const searches: unknown[] = [];
+    const llm = new FakeLLMProvider([{ toolCalls: [{ name: 'cerca_knowledge_base', args: { query: 'danno occulto', cliente: 'ModaNova' } }] }, { text: 'Entro 8 giorni.' }]);
+    const orchestrator = new Orchestrator({
+      llm, model: 'm', systemPrompt: 'base',
+      retriever: { search: async (query, opts) => { searches.push({ query, opts }); return kbResult; } },
+      dataAgent: { analyze: async () => dataResult },
+    });
+    await drain(orchestrator.run({ ...input, scope }));
+    expect(llm.requests[0].tools?.map((t) => t.name)).toEqual(['cerca_knowledge_base']);
+    expect(llm.requests[0].system).toContain('il documento "Procedura reclami e danni"');
+    expect(searches).toEqual([{ query: 'danno occulto', opts: { cliente: undefined, topK: undefined, filtro: { documentId: 'doc-1' } } }]);
+  });
+
+  it('ambito di categoria: filtro per categoria', async () => {
+    const searches: { opts: unknown }[] = [];
+    const orchestrator = new Orchestrator({
+      llm: new FakeLLMProvider([{ toolCalls: [{ name: 'cerca_knowledge_base', args: { query: 'giacenza' } }] }, { text: 'ok' }]),
+      model: 'm', systemPrompt: 'base',
+      retriever: { search: async (_q, opts) => { searches.push({ opts }); return kbResult; } },
+      dataAgent: { analyze: async () => dataResult },
+    });
+    await drain(orchestrator.run({ ...input, scope: { type: 'category', id: 'cat-9', label: 'Reclami e giacenze' } }));
+    expect(searches[0].opts).toMatchObject({ filtro: { categoryId: 'cat-9' } });
+  });
+
+  it('se il modello prova comunque l’analisi dati, viene rifiutata', async () => {
+    const analyses: unknown[] = [];
+    const orchestrator = new Orchestrator({
+      llm: new FakeLLMProvider([{ toolCalls: [{ name: 'analizza_dati', args: { domanda: 'tasso danni', genera_grafico: false } }] }, { text: 'Non posso qui.' }]),
+      model: 'm', systemPrompt: 'base',
+      retriever: { search: async () => kbResult },
+      dataAgent: { analyze: async (i) => { analyses.push(i); return dataResult; } },
+    });
+    const { outcome } = await drain(orchestrator.run({ ...input, scope }));
+    expect(analyses).toEqual([]);
+    expect(outcome.toolsUsed[0]).toMatchObject({ name: 'analizza_dati', ok: false });
+  });
+});

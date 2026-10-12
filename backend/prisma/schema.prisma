@@ -32,6 +32,7 @@ model User {
   feedback      Feedback[]
   llmCalls      LlmCall[]
   auditLogs     AuditLog[]
+  documents     Document[]
 }
 
 model Conversation {
@@ -42,6 +43,8 @@ model Conversation {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   archivedAt DateTime?
+  scopeType  String? // document | category: chat limitata a un documento o a una categoria
+  scopeId    String?
   messages   Message[]
   llmCalls   LlmCall[]
 
@@ -156,4 +159,36 @@ model AuditLog {
 model Setting {
   key   String @id
   value String
+}
+
+model DocumentCategory {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String     @default("")
+  position    Int        @default(0)
+  createdAt   DateTime   @default(now())
+  documents   Document[]
+}
+
+model Document {
+  id           String           @id @default(uuid())
+  title        String
+  fileName     String
+  kind         String // pdf | docx | txt | md
+  sizeBytes    Int
+  checksum     String
+  storagePath  String
+  categoryId   String
+  category     DocumentCategory @relation(fields: [categoryId], references: [id])
+  uploadedById String?
+  uploadedBy   User?            @relation(fields: [uploadedById], references: [id])
+  origin       String           @default("upload") // seed | upload
+  status       String           @default("processing") // processing | ready | error
+  errorMessage String?
+  sections     Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([categoryId, checksum])
+  @@index([status])
 }

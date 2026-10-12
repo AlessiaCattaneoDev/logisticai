@@ -13,6 +13,8 @@ import { assertEmbeddingModelMatches, deriveClienti } from './rag/ingest.js';
 import { Retriever } from './rag/retriever.js';
 import { ChromaVectorStore } from './rag/vectorStore.js';
 import { DataAgentClient } from './services/dataAgentClient.js';
+import { DocumentService } from './documents/service.js';
+import { HomeService } from './home/service.js';
 import { TelemetryRecorder } from './telemetry/recorder.js';
 
 const logger = pino({ name: 'logisticai-backend' });
@@ -37,16 +39,35 @@ try {
   await assertEmbeddingModelMatches(store, embedder).catch((err: Error) => fatal(err.message));
   if (!(await dataAgent.healthy())) logger.warn(`Data agent non raggiungibile su ${config.dataAgentUrl}: le analisi dei dati falliranno finché non è avviato`);
 
+  const clienti = deriveClienti(resolve(ROOT, 'knowledge_base/source'));
   const orchestrator = new Orchestrator({
     llm: createLLMProvider(config),
     model: config.llm.model,
     reasoningEffort: config.llm.reasoningEffort,
-    systemPrompt: buildSystemPrompt(deriveClienti(resolve(ROOT, 'knowledge_base/source'))),
+    systemPrompt: buildSystemPrompt(clienti),
     retriever: new Retriever(embedder, store, { maxDistance: config.chroma.maxDistance }),
     dataAgent,
   });
   const recorder = new TelemetryRecorder(prisma, config.costs.usdEurRate);
   const chatService = new ChatService(prisma, orchestrator, recorder, 20, logger);
+  const documents = new DocumentService({
+    prisma,
+    store,
+    embedder,
+    rootDir: ROOT,
+    uploadDir: resolve(ROOT, 'backend/storage/documents'),
+    clienti,
+    logger,
+    // Anche l'indicizzazione dei documenti caricati ha un costo: finisce nella telemetria.
+    onEmbedding: (usage, userId) =>
+      recorder.record({ component: 'embedding', provider: embedder.id, model: embedder.model, usage: { inputTokens: usage.inputTokens, outputTokens: 0, cachedInputTokens: 0 }, latencyMs: usage.latencyMs, ...(userId ? { userId } : {}) }).then(() => undefined),
+  });
+  const resumed = await documents.resumePending();
+  if (resumed) logger.info(`Ripresa l'elaborazione di ${resumed} documenti rimasti in analisi`);
+  const servicesStatus = async () => ({
+    chroma: (await store.healthy()) ? ('ok' as const) : ('down' as const),
+    dataAgent: (await dataAgent.healthy()) ? ('ok' as const) : ('down' as const),
+  });
   const admin = new AdminService({
     prisma,
     chat: chatService,
@@ -77,6 +98,8 @@ try {
     },
     chat: { service: chatService },
     admin,
+    documents: { service: documents },
+    home: new HomeService({ prisma, dailyBudgetEur: config.costs.dailyBudgetEur, services: servicesStatus }),
   });
   app.listen(config.port, () => {
     logger.info(`Backend in ascolto su http://localhost:${config.port} (LLM ${config.llm.provider}:${config.llm.model})`);

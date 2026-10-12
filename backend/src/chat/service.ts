@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type {
   Artifact,
+  ChatScope,
   ChatResponse,
   ChatStreamEvent,
   ConversationDetail,
@@ -18,6 +19,7 @@ import type { Orchestrator, OrchestratorOutcome } from '../orchestrator/agent.js
 import type { TelemetryRecorder } from '../telemetry/recorder.js';
 
 export class NotFoundError extends Error {}
+export class ScopeError extends Error {}
 
 const ERROR_REPLY = 'Si è verificato un errore durante la risposta. Riprova tra qualche istante.';
 
@@ -30,15 +32,32 @@ export class ChatService {
     private readonly logger?: { error: (obj: object, msg: string) => void },
   ) {}
 
-  /** Conversazione esistente dell'utente (404 se non sua) oppure nuova. Da chiamare prima di aprire lo stream. */
-  async resolveConversation(userId: string, conversationId: string | undefined, firstMessage: string) {
+  /** Etichetta leggibile di un ambito; null se il documento non è disponibile o la categoria non esiste. */
+  async describeScope(type: string | null, id: string | null): Promise<ChatScope | null> {
+    if (!type || !id) return null;
+    if (type === 'document') {
+      const d = await this.prisma.document.findFirst({ where: { id, status: 'ready' }, select: { title: true } });
+      return d ? { type: 'document', id, label: d.title } : null;
+    }
+    const c = await this.prisma.documentCategory.findUnique({ where: { id }, select: { name: true } });
+    return c ? { type: 'category', id, label: c.name } : null;
+  }
+
+  /**
+   * Conversazione esistente dell'utente (404 se non sua) oppure nuova, eventualmente limitata a un ambito.
+   * Da chiamare prima di aprire lo stream. L'ambito si fissa alla creazione.
+   */
+  async resolveConversation(userId: string, conversationId: string | undefined, firstMessage: string, scope?: { type: 'document' | 'category'; id: string }) {
     if (conversationId) {
       const conv = await this.prisma.conversation.findFirst({ where: { id: conversationId, userId, archivedAt: null } });
       if (!conv) throw new NotFoundError('Conversazione non trovata');
-      return conv;
+      return { ...conv, scope: await this.describeScope(conv.scopeType, conv.scopeId) };
     }
+    const described = scope ? await this.describeScope(scope.type, scope.id) : null;
+    if (scope && !described) throw new ScopeError(scope.type === 'document' ? 'Il documento non è disponibile' : 'Categoria non trovata');
     const title = firstMessage.trim().replace(/\s+/g, ' ').slice(0, 60);
-    return this.prisma.conversation.create({ data: { userId, title } });
+    const conv = await this.prisma.conversation.create({ data: { userId, title, scopeType: scope?.type, scopeId: scope?.id } });
+    return { ...conv, scope: described };
   }
 
   private async history(conversationId: string): Promise<NeutralMessage[]> {
@@ -50,14 +69,14 @@ export class ChatService {
     return rows.reverse().map((m) => ({ role: m.role === 'USER' ? 'user' : 'assistant', content: m.content }) as NeutralMessage);
   }
 
-  async *handle(input: { userId: string; conversationId: string; message: string; signal?: AbortSignal }): AsyncGenerator<ChatStreamEvent> {
+  async *handle(input: { userId: string; conversationId: string; message: string; signal?: AbortSignal; scope?: ChatScope | null }): AsyncGenerator<ChatStreamEvent> {
     const started = performance.now();
     const history = await this.history(input.conversationId);
     await this.prisma.message.create({ data: { conversationId: input.conversationId, role: 'USER', content: input.message } });
 
     let outcome: OrchestratorOutcome;
     try {
-      const run = this.orchestrator.run({ history, message: input.message, userId: input.userId, requestId: randomUUID(), signal: input.signal });
+      const run = this.orchestrator.run({ history, message: input.message, userId: input.userId, requestId: randomUUID(), signal: input.signal, ...(input.scope ? { scope: input.scope } : {}) });
       for (;;) {
         const step = await run.next();
         if (step.done) {
@@ -123,7 +142,12 @@ export class ChatService {
 
   async list(userId: string): Promise<ConversationSummary[]> {
     const rows = await this.prisma.conversation.findMany({ where: { userId, archivedAt: null }, orderBy: { updatedAt: 'desc' }, take: 100 });
-    return rows.map((c) => ({ id: c.id, title: c.title, updatedAt: c.updatedAt.toISOString() }));
+    const out: ConversationSummary[] = [];
+    for (const c of rows) {
+      const scope = await this.describeScope(c.scopeType, c.scopeId);
+      out.push({ id: c.id, title: c.title, updatedAt: c.updatedAt.toISOString(), ...(scope ? { scope } : {}) });
+    }
+    return out;
   }
 
   /** Dettaglio di una conversazione; con `userId` null (admin) non si filtra per proprietario. */
@@ -138,10 +162,12 @@ export class ChatService {
       },
     });
     if (!conv) throw new NotFoundError('Conversazione non trovata');
+    const scope = await this.describeScope(conv.scopeType, conv.scopeId);
     return {
       id: conv.id,
       title: conv.title,
       updatedAt: conv.updatedAt.toISOString(),
+      ...(scope ? { scope } : {}),
       messages: conv.messages.map((m): StoredMessage => {
         const byType = (t: string) => m.artifacts.filter((a) => a.type === t).map((a) => a.payload);
         return {

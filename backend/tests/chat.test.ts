@@ -199,3 +199,34 @@ describe('feedback', () => {
     expect((await luca.post(`/api/messages/${done.messageId}/feedback`).send({ rating: 'up' })).status).toBe(404);
   });
 });
+
+describe('conversazioni con ambito', () => {
+  async function seedDoc(status = 'ready') {
+    const cat = await prisma.documentCategory.create({ data: { name: 'Reclami e giacenze' } });
+    const doc = await prisma.document.create({ data: { title: 'Procedura reclami e danni', fileName: 'p.md', kind: 'md', sizeBytes: 1, checksum: 'x', storagePath: 'p.md', categoryId: cat.id, status } });
+    return { cat, doc };
+  }
+
+  it('l’ambito si salva sulla conversazione e torna nell’elenco e nel dettaglio', async () => {
+    const { doc } = await seedDoc();
+    const { app, llm } = appWith([{ text: 'Entro 8 giorni.' }, { text: 'Sì.' }]);
+    const agent = await login(app);
+    const res = await agent.post('/api/chat').send({ message: 'Entro quanto?', scope: { type: 'document', id: doc.id } });
+    const done = parseSse(res.text).at(-1)!.data as ChatResponse;
+    expect(llm.requests[0].tools?.map((t) => t.name)).toEqual(['cerca_knowledge_base']);
+    const list = (await agent.get('/api/conversations')).body;
+    expect(list[0].scope).toEqual({ type: 'document', id: doc.id, label: 'Procedura reclami e danni' });
+    // Messaggio successivo senza scope nel corpo: l'ambito resta quello della conversazione
+    await agent.post('/api/chat').send({ conversationId: done.conversationId, message: 'E con foto?' });
+    expect(llm.requests[1].tools?.map((t) => t.name)).toEqual(['cerca_knowledge_base']);
+    expect((await agent.get(`/api/conversations/${done.conversationId}`)).body.scope.label).toBe('Procedura reclami e danni');
+  });
+
+  it('documento non disponibile o categoria inesistente: 400', async () => {
+    const { doc } = await seedDoc('processing');
+    const agent = await login(appWith([]).app);
+    expect((await agent.post('/api/chat').send({ message: 'x', scope: { type: 'document', id: doc.id } })).status).toBe(400);
+    expect((await agent.post('/api/chat').send({ message: 'x', scope: { type: 'category', id: 'nope' } })).status).toBe(400);
+    expect((await agent.post('/api/chat').send({ message: 'x', scope: { type: 'altro', id: 'x' } })).status).toBe(400);
+  });
+});

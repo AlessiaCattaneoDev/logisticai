@@ -28,3 +28,4 @@ backend/prisma/*.db-journal
 .vscode/
 backend/src/generated/
 backend/prisma/test-template.db
+logs/

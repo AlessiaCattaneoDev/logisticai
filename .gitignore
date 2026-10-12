@@ -29,3 +29,5 @@ backend/prisma/*.db-journal
 backend/src/generated/
 backend/prisma/test-template.db
 logs/
+.superpowers/
+backend/storage/

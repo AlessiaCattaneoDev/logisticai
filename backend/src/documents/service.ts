@@ -127,7 +127,7 @@ export class DocumentService {
     const rows = await this.prisma.document.findMany({
       where: {
         ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
-        ...(filters.q ? { OR: [{ title: { contains: filters.q } }, { fileName: { contains: filters.q } }] } : {}),
+        ...(filters.q ? { OR: [{ title: { contains: filters.q, mode: 'insensitive' } }, { fileName: { contains: filters.q, mode: 'insensitive' } }] } : {}),
       },
       orderBy: { createdAt: 'desc' },
       include: this.include,

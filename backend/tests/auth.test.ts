@@ -81,6 +81,20 @@ describe('POST /api/auth/login', () => {
     for (let i = 0; i < 3; i++) await login(app, 'x', 'y');
     expect((await login(app, 'x', 'y')).status).toBe(429);
   });
+
+  it('online dietro Vercel e Railway (TRUST_PROXY=2) il limite vale per il singolo utente, non per il proxy', async () => {
+    const auth = { jwtSecret: JWT_SECRET, expiresIn: '8h', secureCookies: false, loginRateLimit: { windowMs: 60_000, limit: 2 } };
+    const via = (app: ReturnType<typeof buildTestApp>, client: string) =>
+      request(app).post('/api/auth/login').set('X-Forwarded-For', `${client}, 76.76.21.21`).send({ username: 'x', password: 'y' });
+    const online = buildTestApp(prisma, { auth, trustProxy: 2 });
+    for (let i = 0; i < 2; i++) await via(online, '203.0.113.1');
+    expect((await via(online, '203.0.113.1')).status).toBe(429);
+    expect((await via(online, '203.0.113.2')).status).toBe(401);
+    // Senza configurazione tutti sembrerebbero arrivare dall'IP del proxy.
+    const locale = buildTestApp(prisma, { auth });
+    for (let i = 0; i < 2; i++) await via(locale, '203.0.113.1');
+    expect((await via(locale, '203.0.113.2')).status).toBe(429);
+  });
 });
 
 describe('sessione', () => {

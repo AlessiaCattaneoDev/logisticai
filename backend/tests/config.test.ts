@@ -4,7 +4,7 @@ import { ConfigError, loadConfig } from '../src/config';
 const validEnv = {
   JWT_SECRET: 'x'.repeat(32),
   INTERNAL_SERVICE_SECRET: 'y'.repeat(32),
-  DATABASE_URL: 'file:./test.db',
+  DATABASE_URL: 'postgres://u:p@localhost:5432/test',
   LLM_PROVIDER: 'openai',
   LLM_MODEL: 'some-model',
   OPENAI_API_KEY: 'sk-test',
@@ -20,6 +20,18 @@ describe('loadConfig', () => {
     expect(config.jwt.expiresIn).toBe('8h');
     expect(config.costs.usdEurRate).toBe(0.92);
     expect(config.dataAgentUrl).toBe('http://127.0.0.1:8001');
+  });
+
+  it('online (Railway): porta da PORT se BACKEND_PORT manca, proxy fidati e indicizzazione automatica', () => {
+    expect(loadConfig({ ...validEnv, PORT: '8080' }).port).toBe(8080);
+    expect(loadConfig({ ...validEnv, PORT: '8080', BACKEND_PORT: '4000' }).port).toBe(4000);
+    const local = loadConfig(validEnv);
+    expect(local.trustProxy).toBe('loopback');
+    expect(local.autoIngest).toBe(false);
+    const online = loadConfig({ ...validEnv, TRUST_PROXY: '2', AUTO_INGEST: 'true' });
+    expect(online.trustProxy).toBe(2);
+    expect(online.autoIngest).toBe(true);
+    expect(loadConfig({ ...validEnv, AUTO_INGEST: 'false' }).autoIngest).toBe(false);
   });
 
   it('converte i numeri dalle stringhe', () => {

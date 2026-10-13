@@ -87,7 +87,7 @@ Disegna uno schema orizzontale con questi blocchi e frecce:
   - verso **Analista dati Python (pandas agent)**: "analizza le spedizioni", che a sua volta legge `spedizioni.csv`
 - Freccia di ritorno all'interfaccia: "risposta, fonti, grafici".
 - Freccia dall'interfaccia all'orchestratore anche per "documento caricato": l'orchestratore estrae il testo, lo divide in sezioni e lo aggiunge alla knowledge base.
-- Sotto, in piccolo: Database di utenti, documenti, conversazioni e costi (SQLite). Modello AI configurabile: OpenAI, Claude o modello locale, senza cambiare il codice.
+- Sotto, in piccolo: Database di utenti, documenti, conversazioni e costi (PostgreSQL). Modello AI configurabile: OpenAI, Claude o modello locale, senza cambiare il codice.
 Nota a piè di slide: I servizi comunicano solo via HTTP; l'analista dati accetta richieste solo dall'orchestratore, con un token che scade dopo 60 secondi.
 
 ### 10. Il ragionamento, passo per passo
@@ -148,7 +148,7 @@ Tabella a due colonne, Problema | Soluzione:
 Titolo: Non "sembra funzionare": lo misuriamo
 - Numero grande: **20 domande di prova** con il modello reale: documenti 4/4, dati 4/4, documenti e dati 6/6, chat limitata a un documento o a una categoria 3/3, robustezza 2/3 nell'ultima esecuzione completa. L'unico caso mancato (riassunto della pulizia dei dati senza il numero dei duplicati) è passato in 2 riesecuzioni su 2: è variabilità del modello, ed è il motivo per cui la suite si rilancia a ogni cambio.
 - Percorso in una riga: prima prova 13/16, dopo le correzioni 16/16, poi nuove domande di regressione e di ambito fino a 20.
-- Secondo numero: **417 test automatici** su tutti i servizi (interfaccia, orchestratore, libreria documenti, analista dati, dataset, knowledge base), eseguiti a ogni modifica.
+- Secondo numero: **423 test automatici** su tutti i servizi (interfaccia, orchestratore, libreria documenti, analista dati, dataset, knowledge base), eseguiti a ogni modifica.
 - Frase: Ogni cambio di prompt o di modello AI si verifica rilanciando la stessa suite.
 
 ### 17. Valore e prossimi passi

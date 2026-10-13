@@ -9,7 +9,8 @@ import { createPrisma } from './db/client.js';
 import { createEmbeddingProvider, createLLMProvider } from './llm/factory.js';
 import { Orchestrator } from './orchestrator/agent.js';
 import { buildSystemPrompt } from './orchestrator/systemPrompt.js';
-import { assertEmbeddingModelMatches, deriveClienti } from './rag/ingest.js';
+import { ensureKnowledgeBase } from './rag/bootstrap.js';
+import { deriveClienti } from './rag/ingest.js';
 import { Retriever } from './rag/retriever.js';
 import { ChromaVectorStore } from './rag/vectorStore.js';
 import { DataAgentClient } from './services/dataAgentClient.js';
@@ -36,10 +37,10 @@ try {
   const dataAgent = new DataAgentClient({ baseUrl: config.dataAgentUrl, secret: config.internalServiceSecret });
 
   if (!(await store.healthy())) fatal(`ChromaDB non raggiungibile su ${config.chroma.url}: avvialo prima del backend (vedi README)`);
-  await assertEmbeddingModelMatches(store, embedder).catch((err: Error) => fatal(err.message));
   if (!(await dataAgent.healthy())) logger.warn(`Data agent non raggiungibile su ${config.dataAgentUrl}: le analisi dei dati falliranno finché non è avviato`);
 
-  const clienti = deriveClienti(resolve(ROOT, 'knowledge_base/source'));
+  const kbDir = resolve(ROOT, 'knowledge_base/source');
+  const clienti = deriveClienti(kbDir);
   const orchestrator = new Orchestrator({
     llm: createLLMProvider(config),
     model: config.llm.model,
@@ -62,6 +63,8 @@ try {
     onEmbedding: (usage, userId) =>
       recorder.record({ component: 'embedding', provider: embedder.id, model: embedder.model, usage: { inputTokens: usage.inputTokens, outputTokens: 0, cachedInputTokens: 0 }, latencyMs: usage.latencyMs, ...(userId ? { userId } : {}) }).then(() => undefined),
   });
+  const kb = await ensureKnowledgeBase({ store, embedder, documents, kbDir, auto: config.autoIngest }).catch((err: Error) => fatal(err.message));
+  if (kb.indexed) logger.info(`Knowledge base indicizzata all'avvio: ${kb.documents} documenti`);
   const resumed = await documents.resumePending();
   if (resumed) logger.info(`Ripresa l'elaborazione di ${resumed} documenti rimasti in analisi`);
   const servicesStatus = async () => ({
@@ -88,6 +91,7 @@ try {
 
   const app = createApp({
     frontendOrigin: config.frontendOrigin,
+    trustProxy: config.trustProxy,
     healthChecks: { chroma: () => store.healthy(), dataAgent: () => dataAgent.healthy() },
     prisma,
     auth: {

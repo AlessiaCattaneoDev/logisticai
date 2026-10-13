@@ -18,6 +18,8 @@ export type HealthCheck = () => Promise<boolean>;
 
 export interface AppDeps {
   frontendOrigin: string;
+  /** Proxy fidati per ricavare l'IP reale (limite ai tentativi di login): default loopback. */
+  trustProxy?: number | string;
   healthChecks: Record<string, HealthCheck>;
   prisma: PrismaClient;
   auth: AuthConfig;
@@ -37,7 +39,7 @@ async function runCheck(check: HealthCheck): Promise<ServiceStatus> {
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
-  app.set('trust proxy', 'loopback');
+  app.set('trust proxy', deps.trustProxy ?? 'loopback');
   app.use(helmet());
   app.use(cors({ origin: deps.frontendOrigin, credentials: true }));
   app.use(express.json({ limit: '100kb' }));

@@ -141,7 +141,7 @@ describe('caricamento', () => {
 });
 
 describe('elenco ed eliminazione', () => {
-  it('filtri per categoria e testo; canDelete secondo autore e ruolo', async () => {
+  it('filtri per categoria e testo (senza distinguere maiuscole); canDelete secondo autore e ruolo', async () => {
     const a = app();
     const sara = await login(a, 'sara');
     const luca = await login(a, 'luca');
@@ -151,6 +151,8 @@ describe('elenco ed eliminazione', () => {
     expect(perCat).toHaveLength(1);
     expect(perCat[0].canDelete).toBe(false);
     expect((await luca.get('/api/documents?q=note')).body).toHaveLength(1);
+    // In PostgreSQL la ricerca deve ignorare maiuscole e minuscole come in SQLite.
+    expect((await luca.get('/api/documents?q=NOTE')).body).toHaveLength(1);
     expect((await luca.get('/api/documents?q=inesistente')).body).toHaveLength(0);
   });
 

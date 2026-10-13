@@ -1,5 +1,5 @@
 // Schema del database di LogisticAI (PROGETTO.md §11.1).
-// SQLite in sviluppo/consegna; per PostgreSQL basta cambiare provider e adapter.
+// PostgreSQL ovunque: in locale `prisma dev`, online Neon, nei test PGlite (in memoria).
 
 generator client {
   provider = "prisma-client"
@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 enum Role {

@@ -6,7 +6,7 @@ Raccoglie i documenti aziendali in una libreria condivisa e, da un'unica chat, r
 Caso aziendale: **Padana Logistics S.r.l.**, 3PL fittizio con hub a Piacenza e Verona, 10 clienti con SLA dedicati e 5 vettori.
 
 > Progetto finale del Master. Analisi completa e decisioni di progetto: [PROGETTO.md](PROGETTO.md).
-> Repository GitHub: _inserire il link_ · Presentazione: [presentation/](presentation/)
+> Repository GitHub: [github.com/AlessiaCattaneoDev/logisticai](https://github.com/AlessiaCattaneoDev/logisticai). Presentazione: [presentation/](presentation/)
 
 ---
 

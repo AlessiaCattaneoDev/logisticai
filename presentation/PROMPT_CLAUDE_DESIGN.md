@@ -1,6 +1,6 @@
 # Prompt per Claude Design: presentazione LogisticAI
 
-Copia tutto il testo sotto la riga e incollalo in Claude Design. Allega gli screenshot della cartella `presentation/screenshots/` indicati slide per slide. Prima di esportare il PDF sostituisci `[LINK GITHUB]` con l'indirizzo del repository.
+Copia tutto il testo sotto la riga e incollalo in Claude Design. Allega gli screenshot della cartella `presentation/screenshots/` indicati slide per slide.
 
 ---
 
@@ -164,7 +164,7 @@ Colonna destra, "Prossimi passi":
 - Report SLA mensile automatico per ogni cliente.
 - Smistamento delle email di reclamo con bozza di risposta.
 - Accesso con gli account aziendali Microsoft o Google.
-In fondo, su fondo blu notte: **Repository:** [LINK GITHUB] | Grazie
+In fondo, su fondo blu notte: **Repository:** github.com/AlessiaCattaneoDev/logisticai | Grazie
 
 ## Note finali per la generazione
 - Mantieni ogni slide leggibile in 30 secondi: titoli brevi, testo dove serve, screenshot grandi.

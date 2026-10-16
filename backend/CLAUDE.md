@@ -11,13 +11,12 @@ npm run dev          # tsx watch src/server.ts (legge ../.env)
 npm test             # vitest run
 npm run test:watch
 npm run typecheck    # tsc --noEmit
-npm run db:local     # avvia PostgreSQL locale (prisma dev) se il .env punta a localhost:51214
 npm run db:migrate   # prisma migrate dev (schema in prisma/schema.prisma)
 npm run db:seed      # utenti demo da SEED_* del .env (idempotente)
 npm run ingest       # registra i 10 documenti iniziali e ricrea la collection Chroma da tutti i documenti del DB
 npm run db:studio    # interfaccia web sul database
 ```
-Prisma 7: client generato in `src/generated/prisma` (ignorato da git, `postinstall` lo rigenera), database **PostgreSQL** con driver adapter `@prisma/adapter-pg`, config in `prisma.config.ts`. In locale Postgres parte con `npm run db:local` (`prisma dev`, porta 51214, senza Docker; `db:local:stop` per fermarlo); online Neon. Le ricerche testuali usano `mode: 'insensitive'` (Postgres distingue le maiuscole).
+Prisma 7: client generato in `src/generated/prisma` (ignorato da git, `postinstall` lo rigenera), driver adapter `@prisma/adapter-better-sqlite3`, config in `prisma.config.ts`. `DATABASE_URL` è relativo alla cartella `backend/`.
 
 ## Struttura
 ```
@@ -56,11 +55,10 @@ tests/               ← test di integrazione (supertest) e unit
 - Chat: `ChatService` (src/chat/service.ts) salva messaggi, `ToolCall`, `MessageArtifact` (chart, table, source, data_agent) e le `LlmCall` con il `messageId`; l'orchestratore (src/orchestrator/agent.ts) non tocca il DB.
 - Documenti: il file caricato va in `backend/storage/documents/` (escluso da git), la riga nasce `processing` e la coda sequenziale di `DocumentService` lo porta a `ready` (con il numero di sezioni) o `error` (motivo leggibile). All'avvio i documenti rimasti `processing` vengono rielaborati. Ogni sezione in Chroma ha `documentId` e `categoryId` per la chat con ambito.
 - Chat con ambito (`scope` in `POST /api/chat`): solo lo strumento documentale, retriever filtrato, ambito salvato sulla conversazione.
-- All'avvio `server.ts` si ferma se Chroma non risponde. Se la KB non è indicizzata o lo è con un altro modello di embedding: si ferma (serve `npm run ingest`), oppure con `AUTO_INGEST=true` (online) la indicizza da sola (`src/rag/bootstrap.ts`).
-- Online (Railway): porta da `PORT`, `TRUST_PROXY=2` (Vercel + Railway) per l'IP reale nel limite di login, `npm run start:prod` = migrazioni + seed + server. Immagine in `backend/Dockerfile`, config in `backend/railway.json`. Guida: `../DEPLOY.md`.
+- All'avvio `server.ts` si ferma se Chroma non risponde o se la KB è indicizzata con un altro modello di embedding (serve `npm run ingest`).
 
 ## Test
 - Vitest + Supertest. File in `tests/**/*.test.ts` o accanto al codice come `*.test.ts`.
 - LLM sempre finto negli unit/integration test (`FakeLLMProvider`).
-- Database: ogni file di test chiama `createTestDb()` al livello del modulo: un PostgreSQL in memoria (PGlite, `pglite-prisma-adapter`) con le migrazioni applicate in un `beforeAll`, poi `resetDb()` nel `beforeEach`. Nessun server Postgres serve per i test. `@electric-sql/pglite` è fissato alla versione richiesta dall'adapter. Per le app di test usa `buildTestApp()` e `createUser()` di `tests/helpers/testApp.ts`.
+- Database: `tests/globalSetup.ts` crea una volta `prisma/test-template.db` con le migrazioni; ogni file di test usa `createTestDb()` (copia isolata in una cartella temporanea) e `resetDb()` nel `beforeEach`. Per le app di test usa `buildTestApp()` e `createUser()` di `tests/helpers/testApp.ts`.
 - Suite di conformità degli adapter in `src/llm/__tests__/`. Le eval con LLM reale (`npm run eval`) sono separate e richiedono chiavi.

@@ -1,31 +1,15 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { copyFileSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { PGlite } from '@electric-sql/pglite';
-import { PrismaPGlite } from 'pglite-prisma-adapter';
-import { beforeAll } from 'vitest';
-import { PrismaClient } from '../../src/generated/prisma/client';
+import { createPrisma, type PrismaClient } from '../../src/db/client';
 
-const MIGRATIONS = resolve(import.meta.dirname, '../../prisma/migrations');
+const TEMPLATE = resolve(import.meta.dirname, '../../prisma/test-template.db');
 
-/** SQL di tutte le migrazioni, in ordine: lo stesso schema che Prisma applica a Neon. */
-const migrationSql = () =>
-  readdirSync(MIGRATIONS, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name)
-    .sort()
-    .map((name) => readFileSync(join(MIGRATIONS, name, 'migration.sql'), 'utf8'))
-    .join('\n');
-
-/**
- * PostgreSQL vero ma in memoria (PGlite), isolato per ogni file di test: nessun server da installare.
- * Va chiamata al livello del modulo di test: registra un beforeAll che applica le migrazioni.
- */
+/** Database SQLite isolato per un file di test (copia del modello migrato). */
 export function createTestDb(): PrismaClient {
-  const pg = new PGlite();
-  beforeAll(async () => {
-    await pg.exec(migrationSql());
-  });
-  return new PrismaClient({ adapter: new PrismaPGlite(pg) });
+  const path = join(mkdtempSync(join(tmpdir(), 'logisticai-test-')), 'test.db');
+  copyFileSync(TEMPLATE, path);
+  return createPrisma(`file:${path}`);
 }
 
 export async function resetDb(prisma: PrismaClient): Promise<void> {

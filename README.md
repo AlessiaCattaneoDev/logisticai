@@ -54,7 +54,7 @@ Quattro microservizi indipendenti che comunicano solo via HTTP:
 flowchart LR
     U[Operatore / Admin] --> FE[Frontend React<br/>:5173]
     FE -- "cookie JWT httpOnly<br/>POST /api/chat (SSE)" --> BE[Backend Node.js<br/>orchestratore :3001]
-    BE --> DB[(PostgreSQL via Prisma)]
+    BE --> DB[(SQLite via Prisma)]
     BE -- "function calling" --> LLM[(LLM: OpenAI / Claude / ...)]
     BE -- "cerca_knowledge_base" --> CH[(ChromaDB<br/>:8000)]
     BE -- "analizza_dati<br/>JWT di servizio" --> DA[Data agent Python<br/>FastAPI :8001]
@@ -65,7 +65,7 @@ flowchart LR
 | Servizio | Cartella | Tecnologia | Porta |
 |---|---|---|---|
 | Frontend | `frontend/` | React 19, Vite, TypeScript, Tailwind CSS, Recharts, TanStack Table | 5173 |
-| Backend (orchestratore) | `backend/` | Node.js, TypeScript, Express 5, Prisma (PostgreSQL), SDK OpenAI e Anthropic | 3001 |
+| Backend (orchestratore) | `backend/` | Node.js, TypeScript, Express 5, Prisma (SQLite), SDK OpenAI e Anthropic | 3001 |
 | Data agent | `data_agent/` | Python 3.12, FastAPI, pandas, LangChain (pandas agent) | 8001 |
 | Vector store | `vector_db/` | ChromaDB server | 8000 |
 
@@ -75,7 +75,6 @@ Il cuore è il **loop ReAct** dell'orchestratore (`backend/src/orchestrator/agen
 
 - **Node.js 20** o successivo (testato con 22)
 - **Python 3.11 o 3.12** (testato con 3.12)
-- **Nessun database da installare:** gli script avviano un PostgreSQL locale con `prisma dev` (incluso nelle dipendenze). In alternativa basta mettere in `DATABASE_URL` la stringa di un Postgres esistente, per esempio Neon
 - Una **chiave API OpenAI** (modelli usati: `gpt-5.4-mini` ed embedding `text-embedding-3-small`)
 - macOS o Linux per gli script automatici; su Windows usare l'[avvio manuale](#avvio-manuale-servizio-per-servizio) (WSL consigliato)
 
@@ -93,8 +92,6 @@ scripts/start-all.sh
 ```
 
 Poi apri **http://localhost:5173** e accedi con le [credenziali demo](#credenziali-demo).
-
-Per pubblicarlo online (Vercel, Railway, Neon) segui **[DEPLOY.md](DEPLOY.md)**.
 
 I log di ogni servizio sono in `logs/`. Per generare i segreti richiesti dal `.env`:
 
@@ -118,8 +115,7 @@ python3.12 -m venv vector_db/.venv
 vector_db/.venv/bin/pip install -r vector_db/requirements.txt
 
 cd backend
-npm run db:local                                    # avvia PostgreSQL in locale (prisma dev, senza Docker)
-npx prisma migrate deploy                           # crea le tabelle
+npx prisma migrate deploy                           # crea il database SQLite
 npm run db:seed                                     # utenti demo e listini prezzi
 cd ..
 ```
@@ -184,7 +180,7 @@ Un unico file `.env` nella root, letto da backend e data agent. Il template comp
 | `JWT_SECRET` | 64 caratteri casuali | Firma delle sessioni utente |
 | `INTERNAL_SERVICE_SECRET` | 64 caratteri casuali | Firma dei token backend → data agent |
 | `SEED_ADMIN_PASSWORD` / `SEED_OPERATOR_PASSWORD` | | Password degli utenti demo |
-| `DATABASE_URL` | `postgres://postgres:postgres@localhost:51214/template1?sslmode=disable` | PostgreSQL: in locale quello avviato dagli script (`prisma dev`), online la stringa di Neon |
+| `DATABASE_URL` | `file:./prisma/dev.db` | Database SQLite (relativo a `backend/`) |
 | `DAILY_BUDGET_EUR` / `MONTHLY_BUDGET_EUR` | `5` / `50` | Budget mostrati in dashboard |
 | `RAG_MAX_DISTANCE` | `0.65` | Soglia di pertinenza dei documenti |
 
@@ -217,7 +213,7 @@ npm run typecheck        # controllo dei tipi TypeScript
 | Parte | Strumenti | Test |
 |---|---|---|
 | Contratto delle spec di grafici e tabelle | Vitest + zod, pytest + pydantic sulle stesse fixture | 12 + 14 |
-| Backend | Vitest + Supertest, PostgreSQL in memoria (PGlite) isolato per file, LLM finto, file PDF/DOCX/TXT reali | 188 |
+| Backend | Vitest + Supertest, database SQLite isolato, LLM finto, file PDF/DOCX/TXT reali | 182 |
 | Frontend | Vitest + Testing Library + MSW | 59 |
 | Data agent | pytest, LLM finto | 103 |
 | Generatore del dataset | pytest: anomalie e storie nei dati | 37 |
@@ -237,8 +233,7 @@ cd data_agent && .venv/bin/python -m pytest -m eval  # 3 analisi del data agent
 ```
 ├── frontend/          React: home, libreria documenti, chat, grafici e tabelle, amministrazione
 ├── backend/           Node.js: autenticazione, orchestratore ReAct, RAG, libreria documenti, telemetria costi, API admin
-│   ├── prisma/        schema PostgreSQL, migrazioni, seed, listini prezzi
-│   ├── Dockerfile     immagine per Railway (anche data_agent/ e vector_db/ hanno la loro)
+│   ├── prisma/        schema del database, migrazioni, seed, listini prezzi
 │   └── evals/         valutazioni end-to-end con LLM reale
 ├── data_agent/        Python: pulizia dati, KPI, pandas agent, spec di grafici e tabelle
 ├── vector_db/         ChromaDB (dati in vector_db/chroma_data, esclusi da git)
@@ -247,7 +242,6 @@ cd data_agent && .venv/bin/python -m pytest -m eval  # 3 analisi del data agent
 ├── knowledge_base/    10 documenti Markdown + Manuale_Operativo_Padana_Logistics.pdf
 ├── presentation/      presentazione del progetto
 ├── scripts/           setup.sh, start-all.sh
-├── DEPLOY.md          pubblicazione online: Vercel, Railway, Neon
 ├── PROGETTO.md        analisi e progettazione
 └── CLAUDE.md          istruzioni di sviluppo (una per ogni servizio)
 ```
@@ -277,11 +271,10 @@ cd data_agent && .venv/bin/python -m pytest -m eval  # 3 analisi del data agent
 | "Configurazione non valida (.env)" | Il messaggio elenca le variabili mancanti: compilale in `.env` |
 | Le analisi dei dati non rispondono | Verifica che il data agent sia attivo: `curl http://127.0.0.1:8001/health` |
 | Login rifiutato | Rilancia `cd backend && npm run db:seed` dopo aver impostato le password `SEED_*` |
-| "Can't reach database server" | Il PostgreSQL locale è spento: `cd backend && npm run db:local` (lo fanno anche gli script) |
 | Porta già in uso | Ferma il processo sulla porta (8000, 8001, 3001, 5173) o cambia la porta nel `.env` |
 | La dashboard mostra "modelli senza listino" | Aggiungi il prezzo del modello in *Costi e modelli* |
 
-**Limiti noti.** `npm audit` segnala vulnerabilità in dipendenze indirette della CLI di Prisma (driver MySQL non usato: il progetto usa PostgreSQL). L'unica correzione proposta è tornare a Prisma 6, un cambiamento incompatibile, quindi non è applicata. `langchain-experimental`, da cui viene il pandas agent, è in dismissione: il suo uso è isolato in `data_agent/agent.py`.
+**Limiti noti.** `npm audit` segnala vulnerabilità in dipendenze indirette della CLI di Prisma (driver MySQL non usato: il progetto usa SQLite). L'unica correzione proposta è tornare a Prisma 6, un cambiamento incompatibile, quindi non è applicata. `langchain-experimental`, da cui viene il pandas agent, è in dismissione: il suo uso è isolato in `data_agent/agent.py`.
 
 ## Costi
 

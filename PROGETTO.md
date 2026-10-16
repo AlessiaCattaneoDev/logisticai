@@ -272,7 +272,7 @@ Il generatore inserisce **pattern intenzionali**: così le analisi della demo tr
 flowchart LR
     U[👤 Operatore / Admin] --> FE[React SPA<br/>Chat + Dashboard admin<br/>:5173]
     FE -- "cookie JWT httpOnly<br/>POST /api/chat (stream SSE)<br/>/api/admin/*" --> BE[Node.js + TS<br/>Orchestratore Express<br/>:3001]
-    BE --> DB[(Database<br/>PostgreSQL<br/>via Prisma)]
+    BE --> DB[(Database<br/>SQLite → PostgreSQL<br/>via Prisma)]
     BE -- "LLMProvider<br/>(adapter)" --> LLM[(OpenAI · Claude · Gemini<br/>Mistral · locale)]
     BE -- "tool: cerca_knowledge_base" --> CH[(ChromaDB<br/>:8000)]
     BE -- "tool: analizza_dati<br/>POST /analyze + JWT di servizio" --> DA[Data Agent Python<br/>FastAPI :8001]
@@ -288,7 +288,7 @@ flowchart LR
 |---|---|---|---|---|
 | `frontend/` | React + Vite + TypeScript + Tailwind | 5173 | Browser | Chat, login, dashboard admin |
 | `backend/` | Node.js + TypeScript + Express 5 + Prisma | 3001 | Solo front end (via proxy) | Autenticazione, conversazioni, orchestrazione ReAct, RAG, costi, API admin |
-| Database | PostgreSQL (in locale `prisma dev`, online Neon, nei test PGlite in memoria) | 51214 in locale | Solo backend | Utenti, conversazioni, messaggi, chiamate LLM, feedback, audit |
+| Database | SQLite (sviluppo/consegna) → PostgreSQL (produzione) | file | Solo backend | Utenti, conversazioni, messaggi, chiamate LLM, feedback, audit |
 | `vector_db/` | ChromaDB (`chroma run`, venv Python proprio) | 8000 | Solo backend (`127.0.0.1`) | Vector store persistente in `vector_db/chroma_data/` |
 | `data_agent/` | Python + FastAPI + LangChain pandas agent | 8001 | Solo backend (`127.0.0.1` + JWT di servizio) | Pulizia dati, analisi, spec di grafici e tabelle, sintesi |
 
@@ -298,7 +298,7 @@ flowchart LR
 |---|---|---|
 | Linguaggio back end | **TypeScript su Node.js** | Node è richiesto dal brief; TypeScript dà contratti tipizzati tra servizi e lo stesso linguaggio del front end |
 | Framework HTTP | **Express 5** | Standard di fatto, molta documentazione, middleware maturi (auth, rate limit, helmet) |
-| Database | **Prisma + PostgreSQL** | Lo stesso database in locale e online (Neon gratuito). In locale nessuna installazione: `prisma dev` avvia un Postgres senza Docker; i test usano PGlite in memoria. Scelto al posto di SQLite per poter pubblicare il progetto su servizi senza disco persistente |
+| Database | **Prisma + SQLite** | Nessuna installazione per il docente (è un file); passare a PostgreSQL in produzione richiede di cambiare una riga dello schema |
 | Integrazione Node ↔ Python | **FastAPI** (non `child_process`) | Vero microservizio: CSV caricato una volta in memoria, health check, autenticazione, isolamento degli errori |
 | LLM | **Interfaccia `LLMProvider` + adapter per provider** | Cambiare modello o provider = cambiare `.env` (§9) |
 | Orchestrazione | **Loop ReAct scritto a mano** sopra `LLMProvider` | Controllo completo su trace, token e costi di ogni passaggio; nessun vincolo verso un framework |
@@ -987,7 +987,7 @@ SEED_ADMIN_PASSWORD=
 SEED_OPERATOR_PASSWORD=
 
 # --- Database ---
-DATABASE_URL="postgres://postgres:postgres@localhost:51214/template1?sslmode=disable"   # online: stringa di Neon
+DATABASE_URL="file:./dev.db"
 
 # --- Costi e privacy ---
 USD_EUR_RATE=0.92
@@ -1069,7 +1069,7 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | Livello | Backend (TS) | Frontend (TS) | Data agent + dati (Python) |
 |---|---|---|---|
 | **Unit** | Vitest: config, auth, calcolo costi, adapter LLM, retriever, parser | Vitest + Testing Library: componenti (DataChart, DataTable, FeedbackButtons…), formattatori, parser SSE | pytest: `cleaning.py`, `kpi.py`, helper delle spec, generatore del dataset |
-| **Integrazione** | Supertest sulle rotte Express con PostgreSQL in memoria (PGlite) e LLM finto | Pagine con API simulate (MSW) | `TestClient` FastAPI: `/analyze` con LLM finto, verifica del JWT di servizio |
+| **Integrazione** | Supertest sulle rotte Express con DB SQLite di test e LLM finto | Pagine con API simulate (MSW) | `TestClient` FastAPI: `/analyze` con LLM finto, verifica del JWT di servizio |
 | **Contratto** | Schemi zod vs fixture condivise | Gli stessi schemi in rendering | pydantic vs **le stesse** fixture |
 | **Conformità LLM** | Suite unica per tutti gli adapter (§9.3) | - | - |
 | **Valutazioni AI (eval)** | Domande demo → tool attesi, ordine, fonti citate, numeri corretti, con **LLM reale** | - | Domande sui dati → valore atteso entro una tolleranza |

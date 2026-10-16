@@ -21,12 +21,6 @@ wait_for() {
 cleanup() { echo; echo "Arresto dei servizi..."; kill "${PIDS[@]}" 2>/dev/null || true; wait 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
 
-echo "0. Database PostgreSQL"
-# Postgres locale (prisma dev, senza Docker) solo se il .env punta a localhost:51214; con Neon non serve.
-local_db() { grep -Eq '^DATABASE_URL=.*localhost:51214' .env && (cd backend && npm run --silent db:local >/dev/null) || true; }
-local_db
-echo "  database pronto"
-
 echo "1. ChromaDB (vector store, porta 8000)"
 start chroma vector_db/.venv/bin/chroma run --path vector_db/chroma_data --host 127.0.0.1 --port 8000
 wait_for chroma http://127.0.0.1:8000/api/v2/heartbeat

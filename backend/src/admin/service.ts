@@ -168,7 +168,7 @@ export class AdminService {
       where: {
         updatedAt: { gte: da, lte: a },
         ...(filters.userId ? { userId: filters.userId } : {}),
-        ...(filters.q ? { OR: [{ title: { contains: filters.q, mode: 'insensitive' } }, { messages: { some: { content: { contains: filters.q, mode: 'insensitive' } } } }] } : {}),
+        ...(filters.q ? { OR: [{ title: { contains: filters.q } }, { messages: { some: { content: { contains: filters.q } } } }] } : {}),
       },
       orderBy: { updatedAt: 'desc' },
       take: 200,

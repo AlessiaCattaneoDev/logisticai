@@ -31,13 +31,7 @@ const provider = z.enum(LLM_PROVIDERS);
 const envSchema = z
   .object({
     NODE_ENV: z.string().default('development'),
-    BACKEND_PORT: z.coerce.number().int().positive().optional(),
-    // Railway (e simili) assegnano la porta in PORT.
-    PORT: z.coerce.number().int().positive().optional(),
-    // Proxy davanti al backend: 'loopback' in locale, numero di salti online (Vercel + Railway = 2).
-    TRUST_PROXY: z.preprocess((v) => (v === '' || v === undefined ? 'loopback' : /^\d+$/.test(String(v)) ? Number(v) : v), z.union([z.number().int().nonnegative(), z.string()])),
-    // Al primo avvio online l'indice di Chroma è vuoto: con true il backend lo costruisce da solo.
-    AUTO_INGEST: z.preprocess((v) => v === 'true' || v === '1', z.boolean()),
+    BACKEND_PORT: z.coerce.number().int().positive().default(3001),
     FRONTEND_ORIGIN: z.string().default('http://localhost:5173'),
     JWT_SECRET: secret,
     JWT_EXPIRES_IN: z.string().default('8h'),
@@ -79,8 +73,6 @@ const envSchema = z
 export interface AppConfig {
   production: boolean;
   port: number;
-  trustProxy: number | string;
-  autoIngest: boolean;
   frontendOrigin: string;
   databaseUrl: string;
   jwt: { secret: string; expiresIn: string };
@@ -102,9 +94,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
   const e = parsed.data;
   return {
     production: e.NODE_ENV === 'production',
-    port: e.BACKEND_PORT ?? e.PORT ?? 3001,
-    trustProxy: e.TRUST_PROXY,
-    autoIngest: e.AUTO_INGEST,
+    port: e.BACKEND_PORT,
     frontendOrigin: e.FRONTEND_ORIGIN,
     databaseUrl: e.DATABASE_URL,
     jwt: { secret: e.JWT_SECRET, expiresIn: e.JWT_EXPIRES_IN },

@@ -36,10 +36,7 @@ for svc in data_agent vector_db; do
   echo "$svc: ok"
 done
 
-step "5/6 Database PostgreSQL (migrazioni, utenti demo, listini)"
-# Postgres locale (prisma dev, senza Docker) solo se il .env punta a localhost:51214; con Neon non serve.
-local_db() { grep -Eq '^DATABASE_URL=.*localhost:51214' .env && (cd backend && npm run --silent db:local >/dev/null) || true; }
-local_db
+step "5/6 Database (migrazioni, utenti demo, listini)"
 (cd backend && npx prisma migrate deploy && npm run db:seed)
 
 step "6/6 Indicizzazione della knowledge base in ChromaDB"

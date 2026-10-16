@@ -99,8 +99,6 @@ describe('conversazioni', () => {
     expect(down.map((r) => r.titolo)).toEqual(['Penale ModaNova?']);
     expect((await admin.get('/api/admin/conversations?errori=true')).body).toHaveLength(1);
     expect((await admin.get('/api/admin/conversations?q=ciao')).body).toHaveLength(1);
-    expect((await admin.get('/api/admin/conversations?q=CIAO')).body).toHaveLength(1);
-    expect((await admin.get('/api/admin/conversations?q=modanova')).body).toHaveLength(1);
   });
 
   it('dettaglio con trace di chiamate e strumenti, registrato nell’audit', async () => {

@@ -6,7 +6,7 @@ type Size = 'sm' | 'md';
 
 const base = 'inline-flex items-center justify-center gap-2 font-semibold transition-colors disabled:pointer-events-none disabled:opacity-45';
 const variants: Record<Variant, string> = {
-  primary: 'bg-primario text-white hover:bg-primario-scuro',
+  primary: 'bg-primario text-testo hover:bg-primario-scuro',
   secondary: 'bg-superficie text-testo border border-bordo hover:border-primario hover:text-primario',
   ghost: 'text-testo-2 hover:bg-primario-chiaro hover:text-primario',
   danger: 'bg-superficie text-ko border border-ko/30 hover:bg-ko-chiaro',

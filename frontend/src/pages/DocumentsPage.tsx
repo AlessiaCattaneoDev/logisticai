@@ -89,7 +89,7 @@ export function DocumentsPage() {
                 return (
                   <li key={c.id}>
                     <Link to={`/documenti/${c.id}`} className="card group flex h-full flex-col p-5 transition-shadow hover:shadow-[var(--shadow-pop)]">
-                      <span className="grid h-11 w-11 place-items-center rounded-xl bg-primario-chiaro text-primario transition-colors group-hover:bg-primario group-hover:text-white" aria-hidden>
+                      <span className="grid h-11 w-11 place-items-center rounded-xl bg-primario-chiaro text-primario transition-colors group-hover:bg-primario group-hover:text-testo" aria-hidden>
                         <Icon size={20} />
                       </span>
                       <span className="mt-4 font-semibold">{c.name}</span>

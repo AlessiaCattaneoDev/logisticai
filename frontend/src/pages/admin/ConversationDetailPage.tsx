@@ -23,14 +23,14 @@ export function ConversationDetailPage() {
             <div className="space-y-5">
               {data.messages.map((m) => {
                 if (m.role === 'user') {
-                  return <p key={m.id} className="ml-auto max-w-[80%] whitespace-pre-wrap rounded-[18px] rounded-br-md bg-primario px-4 py-2.5 text-white">{m.content}</p>;
+                  return <p key={m.id} className="ml-auto max-w-[80%] whitespace-pre-wrap rounded-[18px] rounded-br-md bg-primario px-4 py-2.5 text-testo">{m.content}</p>;
                 }
                 const t = data.trace[m.id];
                 return (
                   <div key={m.id} className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
                     <AssistantMessage message={m} />
                     {t && (
-                      <aside aria-label="Dettaglio tecnico della risposta" className="rounded-2xl bg-fondo p-4 text-sm">
+                      <aside aria-label="Dettaglio tecnico della risposta" className="rounded-2xl bg-superficie p-4 text-sm">
                         <p className="font-semibold">Dettaglio tecnico</p>
                         <p className="mt-1 text-testo-2">Costo {eur(t.costoEur)}{t.latenzaMs !== null && `, tempo ${formatValue(t.latenzaMs / 1000)} s`}</p>
                         <table className="mt-3 w-full">

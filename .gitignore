@@ -31,3 +31,10 @@ backend/prisma/test-template.db
 logs/
 .superpowers/
 backend/storage/
+
+# File di istruzioni e lavoro per l'AI (restano in locale)
+CLAUDE.md
+PROGETTO.md
+**/CLAUDE.md
+.claude/
+docs/superpowers/

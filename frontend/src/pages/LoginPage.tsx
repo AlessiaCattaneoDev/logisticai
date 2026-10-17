@@ -17,14 +17,14 @@ function Stack() {
     <svg viewBox="0 0 520 300" className="w-full max-w-md" aria-hidden="true">
       {boxes.map((b, i) => (
         <g key={i}>
-          <rect x={b.x} y={b.y} width={b.w} height={70} rx={14} fill="#3b5bfd" opacity={b.o} />
+          <rect x={b.x} y={b.y} width={b.w} height={70} rx={14} fill="#ff6f59" opacity={b.o} />
           {Array.from({ length: Math.floor(b.w / 22) - 1 }, (_, k) => (
             <rect key={k} x={b.x + 18 + k * 22} y={b.y + 16} width={4} height={38} rx={2} fill="#fff" opacity={0.18} />
           ))}
         </g>
       ))}
-      <circle cx={430} cy={70} r={16} fill="#ff7a1a" />
-      <path d="M330 75 C 370 75, 380 70, 410 70" stroke="#ff7a1a" strokeWidth={3} strokeDasharray="2 8" strokeLinecap="round" fill="none" />
+      <circle cx={430} cy={70} r={16} fill="#fdfdfd" />
+      <path d="M330 75 C 370 75, 380 70, 410 70" stroke="#fdfdfd" strokeWidth={3} strokeDasharray="2 8" strokeLinecap="round" fill="none" />
     </svg>
   );
 }
@@ -62,7 +62,7 @@ export function LoginPage() {
         </div>
         <div className="max-w-md">
           <h2 className="text-[32px] font-bold leading-tight">Contratti, procedure e spedizioni in un'unica conversazione.</h2>
-          <p className="mt-3 text-[#c9ccf2]">Fai una domanda: LogisticAI cerca nei documenti dell'azienda, analizza lo storico delle spedizioni e ti risponde con numeri, grafici e fonti.</p>
+          <p className="mt-3 text-[#e6dedd]">Fai una domanda: LogisticAI cerca nei documenti dell'azienda, analizza lo storico delle spedizioni e ti risponde con numeri, grafici e fonti.</p>
         </div>
       </section>
       <section className="flex items-center justify-center px-6 py-12">

@@ -40,13 +40,13 @@ function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => v
             end={end}
             onClick={onNavigate}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm transition-colors ${isActive ? 'bg-primario font-semibold text-white' : 'text-[#c9ccf2] hover:bg-white/8 hover:text-white'}`
+              `flex items-center gap-3 rounded-[10px] px-3 py-2 text-sm transition-colors ${isActive ? 'bg-primario font-semibold text-testo' : 'text-[#e6dedd] hover:bg-white/8 hover:text-white'}`
             }
           >
             <Icon size={17} aria-hidden />
             <span className="flex-1">{label}</span>
             {!!badge && (
-              <span className="rounded-full bg-accento px-1.5 text-[11px] font-bold text-white" aria-label={`${badge} da rivedere`}>
+              <span className="rounded-full bg-accento px-1.5 text-[11px] font-bold text-testo" aria-label={`${badge} da rivedere`}>
                 {badge}
               </span>
             )}
@@ -76,7 +76,7 @@ function Sidebar({ user, onNavigate }: { user: AuthUser; onNavigate?: () => void
         </>
       )}
       <div className="mt-auto flex items-center gap-3 rounded-xl bg-notte-2 px-3 py-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primario text-sm font-bold uppercase text-white" aria-hidden>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primario text-sm font-bold uppercase text-testo" aria-hidden>
           {user.username.slice(0, 1)}
         </span>
         <div className="min-w-0 flex-1">

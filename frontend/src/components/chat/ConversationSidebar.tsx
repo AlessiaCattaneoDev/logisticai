@@ -20,7 +20,7 @@ export function ConversationSidebar({ activeId, onNavigate }: { activeId?: strin
   return (
     <nav aria-label="Conversazioni" className="flex h-full flex-col border-r border-bordo bg-superficie">
       <div className="p-3">
-        <NavLink to="/chat" end onClick={onNavigate} className="flex h-10 items-center justify-center gap-2 rounded-[10px] bg-primario text-sm font-semibold text-white transition-colors hover:bg-primario-scuro">
+        <NavLink to="/chat" end onClick={onNavigate} className="flex h-10 items-center justify-center gap-2 rounded-[10px] bg-primario text-sm font-semibold text-testo transition-colors hover:bg-primario-scuro">
           <Plus size={16} aria-hidden /> Nuova conversazione
         </NavLink>
       </div>

@@ -33,7 +33,7 @@ export function Composer({ disabled, onSend, placeholder }: { disabled: boolean;
         placeholder={placeholder ?? 'Chiedi di un contratto, di una procedura o dei dati delle spedizioni'}
         className="flex-1 resize-none bg-transparent px-2 py-2 outline-none placeholder:text-testo-2/70"
       />
-      <button type="submit" disabled={disabled || !text.trim()} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-primario px-4 text-sm font-semibold text-white transition-colors hover:bg-primario-scuro disabled:opacity-40">
+      <button type="submit" disabled={disabled || !text.trim()} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-primario px-4 text-sm font-semibold text-testo transition-colors hover:bg-primario-scuro disabled:opacity-40">
         <SendHorizontal size={16} aria-hidden /> Invia
       </button>
     </form>

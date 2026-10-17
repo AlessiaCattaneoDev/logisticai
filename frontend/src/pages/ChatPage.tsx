@@ -29,7 +29,7 @@ function useRequestedScope(): { scope: ChatScope | null; loading: boolean } {
 
 export function ScopeChip({ scope, onRemove }: { scope: ChatScope; onRemove: () => void }) {
   return (
-    <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-accento-chiaro py-1.5 pl-3 pr-1.5 text-sm font-semibold text-[#8a3d05]">
+    <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-accento-chiaro py-1.5 pl-3 pr-1.5 text-sm font-semibold text-accento-scuro">
       <FileText size={15} className="shrink-0" aria-hidden />
       <span className="truncate">Stai chiedendo a: {scope.label}</span>
       <button type="button" onClick={onRemove} aria-label="Togli l'ambito e chiedi a tutta la piattaforma" title="Chiedi a tutta la piattaforma" className="rounded-full p-1 hover:bg-accento/15">
@@ -68,7 +68,7 @@ function ChatView({ conversationId, requested }: { conversationId?: string; requ
           {messages.map((m) =>
             m.role === 'user' ? (
               <div key={m.id} className="flex justify-end">
-                <p className="max-w-[80%] whitespace-pre-wrap rounded-[18px] rounded-br-md bg-primario px-4 py-2.5 text-white">{m.content}</p>
+                <p className="max-w-[80%] whitespace-pre-wrap rounded-[18px] rounded-br-md bg-primario px-4 py-2.5 text-testo">{m.content}</p>
               </div>
             ) : (
               <AssistantMessage key={m.id} message={m} onRetry={retry} onFeedback={sendFeedback} />

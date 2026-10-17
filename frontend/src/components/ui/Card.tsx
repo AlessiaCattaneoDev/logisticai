@@ -31,10 +31,10 @@ export function PageHeader({ title, description, actions }: { title: string; des
 export function StatCard({ label, value, hint, tone = 'default', children }: { label: string; value: ReactNode; hint?: ReactNode; tone?: 'default' | 'primary'; children?: ReactNode }) {
   const primary = tone === 'primary';
   return (
-    <div className={`rounded-2xl p-4 ${primary ? 'bg-primario text-white' : 'card'}`}>
-      <p className={`text-sm ${primary ? 'text-white/80' : 'text-testo-2'}`}>{label}</p>
+    <div className={`rounded-2xl p-4 ${primary ? 'bg-primario text-testo' : 'card'}`}>
+      <p className={`text-sm ${primary ? 'text-testo/80' : 'text-testo-2'}`}>{label}</p>
       <p className="mt-1 text-[28px] font-bold leading-tight tracking-tight tabular-nums">{value}</p>
-      {hint && <p className={`mt-1 text-xs ${primary ? 'text-white/75' : 'text-testo-2'}`}>{hint}</p>}
+      {hint && <p className={`mt-1 text-xs ${primary ? 'text-testo/75' : 'text-testo-2'}`}>{hint}</p>}
       {children}
     </div>
   );

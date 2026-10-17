@@ -1,10 +1,10 @@
 import type { TooltipContentProps } from 'recharts';
 
 // Stile comune a tutti i grafici (risposte della chat, home, dashboard admin).
-export const GRID = { stroke: '#eef0f7', vertical: false } as const;
-export const AXIS = { tick: { fill: '#6a6e91', fontSize: 12 }, tickLine: false, axisLine: false, tickMargin: 8 } as const;
-export const X_AXIS = { ...AXIS, axisLine: { stroke: '#dde1f0' } } as const;
-export const CURSOR = { fill: '#eef1ff', opacity: 0.7 } as const;
+export const GRID = { stroke: '#efe9e8', vertical: false } as const;
+export const AXIS = { tick: { fill: '#6e6260', fontSize: 12 }, tickLine: false, axisLine: false, tickMargin: 8 } as const;
+export const X_AXIS = { ...AXIS, axisLine: { stroke: '#e6dedd' } } as const;
+export const CURSOR = { fill: '#fff0ed', opacity: 0.7 } as const;
 export const BAR_RADIUS: [number, number, number, number] = [6, 6, 2, 2];
 export const BAR_RADIUS_H: [number, number, number, number] = [2, 6, 6, 2];
 

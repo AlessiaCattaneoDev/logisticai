@@ -147,7 +147,7 @@ export function DataChart({ spec, initialDimension }: Props) {
         {tooltip}
         {visible.map(element)}
         {(spec.referenceLines ?? []).map((r) => {
-          const label = { value: r.label, position: 'insideTopRight' as const, fill: '#b4530c', fontSize: 12, fontWeight: 600 };
+          const label = { value: r.label, position: 'insideTopRight' as const, fill: '#181010', fontSize: 12, fontWeight: 600 };
           const line = { ifOverflow: 'extendDomain' as const, stroke: THRESHOLD_COLOR, strokeWidth: 2, strokeDasharray: '6 5', label };
           return r.axis === 'y' && !horizontal ? <ReferenceLine key={r.label} y={r.value} {...line} /> : <ReferenceLine key={r.label} x={r.value} {...line} />;
         })}

@@ -11,7 +11,7 @@ export function PeriodPicker() {
           type="button"
           aria-pressed={period.preset === p.id}
           onClick={() => setPreset(p.id)}
-          className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${period.preset === p.id ? 'bg-primario text-white' : 'text-testo-2 hover:text-testo'}`}
+          className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${period.preset === p.id ? 'bg-primario text-testo' : 'text-testo-2 hover:text-testo'}`}
         >
           {p.label}
         </button>

@@ -40,7 +40,7 @@ function FeedbackCard({ f }: { f: AdminFeedbackRow }) {
           Nota interna
           <input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Es. aggiunta FAQ sulla giacenza" className="mt-1 block w-full rounded-[10px] border border-bordo bg-superficie px-3 py-1.5 focus:border-primario focus:outline-none" />
         </label>
-        <button type="submit" disabled={save.isPending} className="h-9 rounded-[10px] bg-primario px-4 text-sm font-semibold text-white hover:bg-primario-scuro disabled:opacity-50">Salva revisione</button>
+        <button type="submit" disabled={save.isPending} className="h-9 rounded-[10px] bg-primario px-4 text-sm font-semibold text-testo hover:bg-primario-scuro disabled:opacity-50">Salva revisione</button>
         {save.isSuccess && <span role="status" className="text-sm text-ok">Revisione salvata.</span>}
       </form>
     </article>
@@ -55,7 +55,7 @@ export function FeedbackPage() {
       <PageHeader title="Segnalazioni" description="Risposte che gli utenti hanno indicato come da migliorare. Usale per correggere documenti e istruzioni dell'assistente." />
       <div className="mb-4 flex gap-2" role="group" aria-label="Filtra per stato">
         {[...STATI, { id: undefined, label: 'Tutte' }].map((s) => (
-          <button key={s.label} type="button" aria-pressed={stato === s.id} onClick={() => setStato(s.id as FeedbackStatus | undefined)} className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${stato === s.id ? 'bg-primario text-white' : 'bg-superficie text-testo-2 shadow-[var(--shadow-card)] hover:text-testo'}`}>
+          <button key={s.label} type="button" aria-pressed={stato === s.id} onClick={() => setStato(s.id as FeedbackStatus | undefined)} className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${stato === s.id ? 'bg-primario text-testo' : 'bg-superficie text-testo-2 shadow-[var(--shadow-card)] hover:text-testo'}`}>
             {s.label}
           </button>
         ))}

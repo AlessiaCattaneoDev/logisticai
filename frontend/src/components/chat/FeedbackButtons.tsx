@@ -59,7 +59,7 @@ export function FeedbackButtons({ current, onSubmit }: Props) {
           <textarea id="feedback-comment" value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} rows={2} className="mt-1 w-full rounded-[10px] border border-bordo bg-superficie px-3 py-2 text-sm focus:border-primario focus:outline-none" />
           <div className="mt-2 flex justify-end gap-2">
             <button type="button" onClick={() => setOpen(false)} className="rounded-lg px-3 py-1.5 text-sm font-medium text-testo-2 hover:bg-superficie">Annulla</button>
-            <button type="submit" disabled={state === 'sending'} className="rounded-lg bg-primario px-3 py-1.5 text-sm font-semibold text-white hover:bg-primario-scuro disabled:opacity-50">Invia segnalazione</button>
+            <button type="submit" disabled={state === 'sending'} className="rounded-lg bg-primario px-3 py-1.5 text-sm font-semibold text-testo hover:bg-primario-scuro disabled:opacity-50">Invia segnalazione</button>
           </div>
         </form>
       )}

@@ -1,36 +1,36 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
-/* Identità "Cargo": blu notte per la navigazione, cobalto come colore principale,
-   arancio container solo per ciò che conta (soglie, notifiche, ambito attivo). */
+/* Identità "Cargo": nero caffè per la navigazione e il testo, corallo come unico colore
+   d'accento (azioni, selezione, ambito attivo, notifiche), grigio caldo per le superfici. */
 @theme {
   --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
 
-  --color-notte: #1c1a4a;
-  --color-notte-2: #262364;
-  --color-notte-3: #8487c2;
-  --color-primario: #3b5bfd;
-  --color-primario-scuro: #2a45d8;
-  --color-primario-chiaro: #eef1ff;
-  --color-primario-tenue: #c7d0ff;
-  --color-accento: #ff7a1a;
-  --color-accento-chiaro: #fff0e3;
-  --color-accento-scuro: #b4530c;
-  --color-fondo: #f5f6fa;
-  --color-superficie: #ffffff;
-  --color-testo: #14123a;
-  --color-testo-2: #6a6e91;
-  --color-bordo: #dde1f0;
-  --color-bordo-tenue: #eef0f7;
+  --color-notte: #181010;
+  --color-notte-2: #2b2020;
+  --color-notte-3: #b3a4a1;
+  --color-primario: #ff6f59;
+  --color-primario-scuro: #f0553d;
+  --color-primario-chiaro: #fff0ed;
+  --color-primario-tenue: #ffc9bf;
+  --color-accento: #ff6f59;
+  --color-accento-chiaro: #fff0ed;
+  --color-accento-scuro: #b93a26;
+  --color-fondo: #fdfdfd;
+  --color-superficie: #f7f3f3;
+  --color-testo: #181010;
+  --color-testo-2: #6e6260;
+  --color-bordo: #e6dedd;
+  --color-bordo-tenue: #efe9e8;
   --color-ok: #1c7a47;
   --color-ok-chiaro: #e3f7ec;
   --color-ko: #d93b3b;
   --color-ko-chiaro: #fde8e8;
 
   --radius-card: 16px;
-  --shadow-card: 0 1px 2px rgb(20 18 58 / 0.05), 0 1px 1px rgb(20 18 58 / 0.03);
-  --shadow-pop: 0 12px 32px -8px rgb(20 18 58 / 0.25);
+  --shadow-card: 0 1px 2px rgb(24 16 16 / 0.05), 0 1px 1px rgb(24 16 16 / 0.03);
+  --shadow-pop: 0 12px 32px -8px rgb(24 16 16 / 0.25);
 }
 
 @layer base {

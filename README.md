@@ -38,7 +38,7 @@ Caso aziendale: **Padana Logistics S.r.l.**, 3PL fittizio con hub a Piacenza e V
 Inoltre:
 - **Home dopo il login**: per ogni utente i suoi numeri (documenti disponibili, conversazioni, domande del mese, risposte trovate utili), le conversazioni da riprendere e i documenti aggiunti di recente; per l'admin anche costo AI di oggi, segnalazioni da rivedere e stato dei servizi.
 - **Libreria documenti per categorie**: chiunque può caricare un PDF, un Word, un testo o un Markdown; il backend estrae il testo, lo divide in sezioni e lo indicizza nella knowledge base, e dopo pochi secondi l'assistente lo usa per rispondere. L'admin crea e rinomina le categorie; l'autore o l'admin possono eliminare un documento.
-- **"Chiedi a questo documento"**: chat limitata a un documento o a una categoria, segnalata da un'etichetta arancio che si toglie con un clic.
+- **"Chiedi a questo documento"**: chat limitata a un documento o a una categoria, segnalata da un'etichetta corallo che si toglie con un clic.
 - **Stati live** durante la risposta, mostrati come la timeline di tracking di una spedizione.
 - **Grafici e tabelle interattivi** (React): cambio tipo di grafico, serie nascondibili, linea della soglia SLA, "Vedi dati", export CSV.
 - **Conversazioni salvate** e feedback 👍/👎 su ogni risposta.
@@ -242,8 +242,7 @@ cd data_agent && .venv/bin/python -m pytest -m eval  # 3 analisi del data agent
 ├── knowledge_base/    10 documenti Markdown + Manuale_Operativo_Padana_Logistics.pdf
 ├── presentation/      presentazione del progetto
 ├── scripts/           setup.sh, start-all.sh
-├── PROGETTO.md        analisi e progettazione
-└── CLAUDE.md          istruzioni di sviluppo (una per ogni servizio)
+└── PROGETTO.md        analisi e progettazione
 ```
 
 ### Dati e knowledge base

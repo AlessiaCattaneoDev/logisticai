@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { jwtVerify } from 'jose';
 import { describe, expect, it } from 'vitest';
@@ -64,9 +64,11 @@ describe('DataAgentClient.healthy', () => {
   });
 });
 
-describe('contratto con il data agent reale', () => {
+// data_agent/CLAUDE.md è un file di lavoro locale (ignorato da git): senza, il controllo si salta.
+const DOC = resolve(import.meta.dirname, '../../data_agent/CLAUDE.md');
+describe.skipIf(!existsSync(DOC))('contratto con il data agent reale', () => {
   it('la risposta d’esempio rispetta il formato documentato in data_agent/CLAUDE.md', () => {
-    const doc = readFileSync(resolve(import.meta.dirname, '../../data_agent/CLAUDE.md'), 'utf8');
+    const doc = readFileSync(DOC, 'utf8');
     for (const key of Object.keys(okBody)) expect(doc).toContain(key);
   });
 });

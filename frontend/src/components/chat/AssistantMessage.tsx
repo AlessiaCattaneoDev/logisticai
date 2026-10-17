@@ -70,7 +70,7 @@ export function AssistantMessage({ message, onRetry, onFeedback }: Props) {
               </ul>
             )}
             {message.dataAgent.codice.map((code, i) => (
-              <pre key={i} className="overflow-x-auto rounded-xl bg-notte p-4 font-mono text-xs leading-relaxed text-[#e4e6ff]">
+              <pre key={i} className="overflow-x-auto rounded-xl bg-notte p-4 font-mono text-xs leading-relaxed text-[#f7f3f3]">
                 {code}
               </pre>
             ))}

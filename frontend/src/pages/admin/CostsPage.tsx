@@ -34,7 +34,7 @@ function PricingForm() {
       {field('cachedInputPer1M', 'Cache $/1M')}
       {field('outputPer1M', 'Output $/1M')}
       {field('validoDal', 'Valido dal', 'date')}
-      <button type="submit" disabled={add.isPending} className="h-9 rounded-[10px] bg-primario px-4 text-sm font-semibold text-white hover:bg-primario-scuro disabled:opacity-50">Aggiungi listino</button>
+      <button type="submit" disabled={add.isPending} className="h-9 rounded-[10px] bg-primario px-4 text-sm font-semibold text-testo hover:bg-primario-scuro disabled:opacity-50">Aggiungi listino</button>
       {add.isSuccess && <span role="status" className="text-sm text-ok">Listino aggiunto.</span>}
       {add.error && <span role="alert" className="text-sm text-ko">{add.error instanceof ApiError ? add.error.message : 'Listino non salvato.'}</span>}
     </form>

@@ -68,7 +68,7 @@ export function UploadDialog({ open, onClose, categories, defaultCategoryId, onU
       >
         {file ? (
           <div className="flex items-center gap-3 rounded-2xl bg-primario-chiaro p-4">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primario text-white" aria-hidden>
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primario text-testo" aria-hidden>
               <FileUp size={18} />
             </span>
             <div className="min-w-0 flex-1">

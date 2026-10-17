@@ -2,10 +2,10 @@
 export function LogoMark({ size = 32, className = '' }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" className={className} aria-hidden="true">
-      <rect width="40" height="40" rx="12" fill="#3B5BFD" />
+      <rect width="40" height="40" rx="12" fill="#FF6F59" />
       <rect x="9" y="18" width="15" height="12" rx="3.5" fill="#fff" opacity=".55" />
       <rect x="16" y="10" width="15" height="12" rx="3.5" fill="#fff" />
-      <circle cx="29" cy="29" r="3.5" fill="#FF7A1A" />
+      <circle cx="29" cy="29" r="3.5" fill="#181010" />
     </svg>
   );
 }

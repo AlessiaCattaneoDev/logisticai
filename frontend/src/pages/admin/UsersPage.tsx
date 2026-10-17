@@ -72,7 +72,7 @@ export function UsersPage() {
               <option value="OPERATOR">Operatore</option><option value="ADMIN">Amministratore</option>
             </select>
           </label>
-          <button type="submit" disabled={create.isPending} className="h-9 rounded-[10px] bg-primario px-4 text-sm font-semibold text-white hover:bg-primario-scuro disabled:opacity-50">Crea utente</button>
+          <button type="submit" disabled={create.isPending} className="h-9 rounded-[10px] bg-primario px-4 text-sm font-semibold text-testo hover:bg-primario-scuro disabled:opacity-50">Crea utente</button>
           {create.isSuccess && <span role="status" className="text-sm text-ok">Utente creato.</span>}
           {create.error && <span role="alert" className="text-sm text-ko">{create.error instanceof ApiError ? create.error.message : 'Utente non creato.'}</span>}
         </form>

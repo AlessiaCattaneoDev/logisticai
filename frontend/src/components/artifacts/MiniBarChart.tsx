@@ -18,7 +18,7 @@ export function MiniBarChart({
           <XAxis {...X_AXIS} dataKey={xKey} tickFormatter={fmtX} interval="preserveStartEnd" minTickGap={12} />
           <YAxis {...AXIS} allowDecimals={false} width={32} />
           <Tooltip cursor={CURSOR} content={(p) => <ChartTooltip {...p} fmtY={fmtY} fmtX={fmtX} />} />
-          <Bar dataKey={yKey} name={label} radius={BAR_RADIUS} maxBarSize={28} isAnimationActive={false} fill="#3b5bfd" />
+          <Bar dataKey={yKey} name={label} radius={BAR_RADIUS} maxBarSize={28} isAnimationActive={false} fill="#ff6f59" />
         </BarChart>
       </ResponsiveContainer>
     </div>

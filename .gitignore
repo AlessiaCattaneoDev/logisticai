@@ -38,4 +38,5 @@ PROGETTO.md
 **/CLAUDE.md
 .claude/
 docs/superpowers/
-presentation/PROMPT_CLAUDE_DESIGN.md
+presentation/
+backend/evals/

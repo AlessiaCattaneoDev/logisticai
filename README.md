@@ -217,7 +217,7 @@ npm run typecheck        # controllo dei tipi TypeScript
 | Contratto delle spec di grafici e tabelle | Vitest + zod, pytest + pydantic sulle stesse fixture | 12 + 14 |
 | Backend | Vitest + Supertest, database SQLite isolato, LLM finto, file PDF/DOCX/TXT reali | 190 |
 | Frontend | Vitest + Testing Library + MSW | 62 |
-| Data agent | pytest, LLM finto, sicurezza degli strumenti, validazione, cache, benchmark | 141 |
+| Data agent | pytest, LLM finto, sicurezza degli strumenti, validazione, cache, benchmark | 143 |
 | Generatore del dataset | pytest: anomalie e storie nei dati | 37 |
 | Knowledge base | pytest: coerenza con le regole di business, PDF aggiornato | 24 |
 
@@ -234,7 +234,7 @@ cd data_agent && .venv/bin/python -m pytest -m eval  # 3 analisi del data agent
 cd data_agent && .venv/bin/python benchmark.py      # scrive data_agent/benchmark/RISULTATI.md
 ```
 
-`npm run eval` verifica per ogni domanda gli strumenti usati e il loro ordine, i numeri attesi, le fonti citate e la presenza di grafici, e salva un report in `backend/evals/results/`. Ultimo risultato sulla suite completa: **19/20**; l'unico caso mancato (robustezza-qualita-dati, il riassunto della pulizia senza il numero dei duplicati) è passato in 2 riesecuzioni su 2.
+`npm run eval` verifica per ogni domanda gli strumenti usati e il loro ordine, i numeri attesi, le fonti citate e la presenza di grafici, e salva un report in `backend/evals/results/`. Ultimo risultato sulla suite completa, con il data agent a strumenti tipizzati: **20/20**.
 
 ## Struttura del repository
 

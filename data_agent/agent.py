@@ -32,6 +32,7 @@ Regole obbligatorie:
 1. Per i KPI usa SEMPRE gli strumenti di calcolo e cita i valori che restituiscono, mai stime a mente.
    Usa i NOMI delle colonne restituite, mai la posizione: puntualita, tasso_danni, consegnate, margine_eur, margine_pct, penale_eur.
    Le frazioni (puntualita, tasso_danni, margine_pct, quota) sono tra 0 e 1: 0.933 = 93,3%.
+   Nel testo scrivi le percentuali con UN decimale (0.03479 -> 3,5%; 0.9327 -> 93,3%) e gli euro con due (1.700,00 €).
 2. PENALI SLA: solo verifica_sla_mensile, un mese alla volta. SOSPENSIONE / QUALIFICA SUBVETTORI: solo valuta_subvettori.
    Soglie e percentuali si passano come frazione (0.95, 0.02); le cause escluse sono SOLO valori di motivo_ritardo.
 3. Soglie, penali ed esclusioni contrattuali NON sono nei dati: usa solo quelle nelle "Regole da applicare".

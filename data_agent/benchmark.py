@@ -95,7 +95,7 @@ def analisi(dati: pd.DataFrame) -> dict[str, Callable[[], object]]:
         "Spedizioni per motivo di ritardo": lambda: _aggregate(dati, ["motivo_ritardo"], spedizioni=("id_spedizione", "size")),
         "Verifica SLA mensile (un cliente)": lambda: verifica_sla_mensile(dati, "ModaNova", "2026-09", 0.95, 1000, 5000, 50, ESCLUSE),
         "Qualifica subvettori": lambda: valuta_subvettori(dati, 0.02, 0.03, 2),
-        "Filtro cliente + periodo": lambda: _filtra(dati, Filtri(valori={"cliente": ["ModaNova"]}, da_mese="2026-01", a_mese="2026-06")),
+        "Filtro cliente + periodo": lambda: _filtra(dati, Filtri(filtri={"cliente": ["ModaNova"]}, da_mese="2026-01", a_mese="2026-06")),
     }
 
 

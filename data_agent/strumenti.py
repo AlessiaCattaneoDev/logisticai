@@ -41,7 +41,9 @@ class _Args(BaseModel):
 
 
 class Filtri(_Args):
-    valori: dict[ColonnaFiltro, list[str]] = Field(
+    # Argomenti di primo livello, non annidati: dal vivo il modello passava da_mese fuori da un oggetto
+    # "filtri", la validazione lo rifiutava e al tentativo successivo il periodo spariva.
+    filtri: dict[ColonnaFiltro, list[str]] = Field(
         default_factory=dict,
         description="Tiene le righe con uno dei valori indicati, es. {'cliente': ['ModaNova'], 'stato': ['Consegnata']}.",
     )
@@ -57,8 +59,7 @@ class _Ordinamento(_Args):
     limite: int | None = Field(None, ge=1, le=1000, description="Tiene solo le prime N righe dopo l'ordinamento (classifiche).")
 
 
-class _Calcolo(_Ordinamento):
-    filtri: Filtri = Field(default_factory=Filtri)
+class _Calcolo(Filtri, _Ordinamento):
     raggruppa_per: list[ColonnaGruppo] = Field(default_factory=list, max_length=3)
 
 
@@ -207,7 +208,7 @@ def valori_ammessi(d: pd.DataFrame, col: str) -> list[str]:
 
 
 def _filtra(d: pd.DataFrame, f: Filtri) -> pd.DataFrame:
-    for col, valori in f.valori.items():
+    for col, valori in f.filtri.items():
         sconosciuti = sorted(set(valori) - set(valori_ammessi(d, col)))
         if sconosciuti:
             raise ValueError(f"valori sconosciuti per {col}: {sconosciuti}. Valori ammessi: {valori_ammessi(d, col)}")
@@ -226,15 +227,15 @@ def _filtra(d: pd.DataFrame, f: Filtri) -> pd.DataFrame:
 
 
 def _puntualita(s: Sessione, a: PuntualitaArgs) -> str:
-    return s.registra(calcola_puntualita(_filtra(s.dati, a.filtri), a.cause_escluse, list(a.raggruppa_per)), a)
+    return s.registra(calcola_puntualita(_filtra(s.dati, a), a.cause_escluse, list(a.raggruppa_per)), a)
 
 
 def _danni(s: Sessione, a: DanniArgs) -> str:
-    return s.registra(tasso_danni(_filtra(s.dati, a.filtri), list(a.raggruppa_per)), a)
+    return s.registra(tasso_danni(_filtra(s.dati, a), list(a.raggruppa_per)), a)
 
 
 def _margine(s: Sessione, a: MargineArgs) -> str:
-    return s.registra(margine(_filtra(s.dati, a.filtri), list(a.raggruppa_per)), a)
+    return s.registra(margine(_filtra(s.dati, a), list(a.raggruppa_per)), a)
 
 
 def _aggrega(s: Sessione, a: AggregaArgs) -> str:
@@ -244,7 +245,7 @@ def _aggrega(s: Sessione, a: AggregaArgs) -> str:
             aggs["spedizioni"] = ("id_spedizione", "size")
         else:
             aggs[f"{m.operazione}_{m.colonna}"] = (m.colonna, OPERAZIONI[m.operazione])
-    out = _aggregate(_filtra(s.dati, a.filtri), list(a.raggruppa_per), **aggs)
+    out = _aggregate(_filtra(s.dati, a), list(a.raggruppa_per), **aggs)
     if a.quota:
         if "spedizioni" not in out:
             raise ValueError("quota richiede la misura 'conteggio'")
@@ -257,6 +258,17 @@ def _sla(s: Sessione, a: SlaArgs) -> str:
     if a.cliente not in clienti:
         raise ValueError(f"cliente '{a.cliente}' sconosciuto. Clienti: {clienti}")
     esito = verifica_sla_mensile(s.dati, a.cliente, a.mese, a.soglia, a.penale_per_punto, a.tetto, a.volume_minimo, a.cause_escluse)
+    # Andamento dei 6 mesi fino a quello verificato, già registrato: il grafico è a una chiamata di distanza
+    # (dal vivo, senza un risultato pronto, a volte l'agente rispondeva senza grafico).
+    cliente = s.dati[(s.dati["cliente"] == a.cliente) & (s.dati["mese_previsto"] <= a.mese)]
+    mesi = sorted(cliente["mese_previsto"].dropna().unique())[-6:]
+    trend = calcola_puntualita(cliente[cliente["mese_previsto"].isin(mesi)], a.cause_escluse, ["mese_previsto"])
+    rid = json.loads(s.registra(trend))["risultato"]
+    esito["andamento"] = {
+        "risultato": rid,
+        "per_il_grafico": f"crea_grafico(risultato='{rid}', tipo='line', x='mese_previsto', y='puntualita', formato_y='percent', "
+                          f"linee_riferimento=[{{'valore': {esito['soglia']}, 'etichetta': 'Soglia SLA'}}])",
+    }
     return json.dumps(esito, ensure_ascii=False)
 
 

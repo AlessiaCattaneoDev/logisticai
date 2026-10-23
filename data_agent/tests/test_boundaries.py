@@ -1,9 +1,11 @@
-"""Il data agent non deve conoscere le regole contrattuali: le riceve dal backend (lette dalla KB)."""
+"""Confini del data agent: niente regole contrattuali (arrivano dal backend), niente librerie grafiche,
+niente esecuzione di codice generato dal modello (le regole arrivano da documenti caricabili da chiunque)."""
 from pathlib import Path
 
 SERVICE = Path(__file__).resolve().parents[1]
 SOURCES = [p for p in SERVICE.glob("*.py")]
-FORBIDDEN = ["business_rules", "matplotlib", "seaborn", "plotly", "subprocess"]
+FORBIDDEN = ["business_rules", "matplotlib", "seaborn", "plotly", "subprocess",
+             "allow_dangerous_code", "langchain_experimental", "PythonAstREPLTool", "PythonREPL", "exec(", "eval(", ".query("]
 
 
 def test_nessun_riferimento_vietato_nel_codice_del_servizio():
@@ -16,7 +18,7 @@ def test_nessun_riferimento_vietato_nel_codice_del_servizio():
     assert offenders == []
 
 
-def test_requirements_senza_librerie_grafiche():
+def test_requirements_senza_librerie_grafiche_ne_agenti_che_eseguono_codice():
     req = (SERVICE / "requirements.txt").read_text(encoding="utf-8").lower()
-    for lib in ["matplotlib", "seaborn", "plotly"]:
+    for lib in ["matplotlib", "seaborn", "plotly", "langchain-experimental"]:
         assert f"\n{lib}" not in req

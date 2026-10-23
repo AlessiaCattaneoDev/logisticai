@@ -10,6 +10,12 @@ def test_valori_di_default():
     assert s.csv_path.name == "spedizioni.csv" and s.csv_path.is_absolute()
     assert s.timeout_s == 90 and s.max_iterations == 8
     assert s.model_id == "openai:m"
+    assert s.cache_ttl_s == 3600 and s.cache_max_voci == 256
+
+
+def test_cache_configurabile_e_disattivabile():
+    s = Settings.from_env({**BASE, "DATA_AGENT_CACHE_TTL_S": "0", "DATA_AGENT_CACHE_MAX_VOCI": "10"})
+    assert s.cache_ttl_s == 0 and s.cache_max_voci == 10
 
 
 def test_segreto_obbligatorio_e_lungo():

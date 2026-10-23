@@ -8,7 +8,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { ChartSpec, ChatResponse, ChatStreamEvent } from '@logisticai/shared';
 import { createQueryClient, routes } from './App';
-import { doc, sara, server, sseResponse, state } from './test/msw';
+import { chatHandler, doc, sara, server, sseResponse, state } from './test/msw';
 
 const chart = JSON.parse(readFileSync(resolve(__dirname, '../../shared/contracts/fixtures/valid/chart_line_sla.json'), 'utf8')) as ChartSpec;
 
@@ -93,10 +93,10 @@ describe('chat', () => {
 
   it('domanda ibrida: timeline, risposta, grafico, fonti e dettagli del calcolo', async () => {
     let body: unknown;
-    server.use(http.post('*/api/chat', async ({ request }) => { body = await request.json(); return sseResponse(streamEvents); }));
+    server.use(http.post('*/api/chat', chatHandler(streamEvents, (b) => (body = b))));
     const router = renderAt('/chat');
     await userEvent.click(await screen.findByRole('button', { name: /ModaNova ha diritto a penali/ }));
-    // Nuova conversazione: l'URL diventa /chat/:id e la vista si rimonta usando la cache.
+    // Nuova conversazione: l'URL diventa /chat/:id e la vista mostra la conversazione ricaricata dal server.
     await waitFor(() => expect(router.state.location.pathname).toBe('/chat/conv-1'));
     // Si attende la risposta salvata (con i pulsanti di valutazione) prima di leggerne il contenuto.
     await screen.findByRole('button', { name: 'Risposta utile' });
@@ -116,7 +116,7 @@ describe('chat', () => {
   it('feedback negativo con motivo e commento', async () => {
     let feedback: unknown;
     server.use(
-      http.post('*/api/chat', () => sseResponse(streamEvents)),
+      http.post('*/api/chat', chatHandler(streamEvents)),
       http.post('*/api/messages/:id/feedback', async ({ request, params }) => {
         feedback = { id: params.id, ...((await request.json()) as object) };
         return HttpResponse.json({ rating: 'down' });
@@ -139,11 +139,11 @@ describe('chat', () => {
   it('errore del server: messaggio e Riprova che reinvia la stessa domanda', async () => {
     let calls = 0;
     server.use(
-      http.post('*/api/chat', () => {
+      http.post('*/api/chat', (info) => {
         calls++;
         return calls === 1
           ? sseResponse([{ event: 'status', data: { stage: 'thinking' } }, { event: 'error', data: { message: 'Si è verificato un errore durante la risposta.', retryable: true } }])
-          : sseResponse(streamEvents);
+          : chatHandler(streamEvents)(info);
       }),
     );
     const router = renderAt('/chat');
@@ -154,7 +154,42 @@ describe('chat', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/chat/conv-1'));
     expect(await screen.findByText('93,3%')).toBeInTheDocument();
     expect(calls).toBe(2);
-    expect(screen.getAllByText('Penale ModaNova?')).toHaveLength(1);
+    expect(screen.getAllByText('Penale ModaNova?', { selector: 'p' })).toHaveLength(1);
+  });
+
+  it('Interrompi: ferma lo stream, tiene il testo arrivato e la domanda successiva resta nella stessa conversazione', async () => {
+    const bodies: { conversationId?: string }[] = [];
+    let aborted = false;
+    const enc = new TextEncoder();
+    server.use(
+      http.post('*/api/chat', async ({ request }) => {
+        bodies.push((await request.json()) as { conversationId?: string });
+        if (bodies.length > 1) return chatHandler(streamEvents)({ request: new Request(request.url, { method: 'POST', body: JSON.stringify({ message: 'seconda' }) }) });
+        request.signal.addEventListener('abort', () => (aborted = true));
+        // Stream che resta aperto: arriva solo l'inizio della risposta.
+        const stream = new ReadableStream<Uint8Array>({
+          start(c) {
+            for (const e of [
+              { event: 'start', data: { conversationId: 'conv-1' } },
+              { event: 'tool_start', data: { tool: 'analizza_dati', args: {} } },
+              { event: 'delta', data: { text: 'Sto calcolando la puntualità' } },
+            ]) c.enqueue(enc.encode(`event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`));
+          },
+        });
+        return new HttpResponse(stream, { headers: { 'Content-Type': 'text/event-stream' } });
+      }),
+    );
+    const router = renderAt('/chat');
+    await userEvent.type(await screen.findByLabelText('Scrivi una domanda'), 'Puntualità per hub?{Enter}');
+    expect(await screen.findByText('Sto calcolando la puntualità')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Interrompi' }));
+    expect(await screen.findByText('Risposta interrotta.')).toBeInTheDocument();
+    await waitFor(() => expect(aborted).toBe(true));
+    expect(screen.getByText('Sto calcolando la puntualità')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Interrompi' })).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Scrivi una domanda'), 'E per vettore?{Enter}');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/chat/conv-1'));
+    expect(bodies[1].conversationId).toBe('conv-1');
   });
 
   it('riapre una conversazione salvata dalla sidebar', async () => {

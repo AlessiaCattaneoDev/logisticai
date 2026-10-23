@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import threading
+import uuid
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -15,9 +16,10 @@ from pydantic import BaseModel, Field
 
 from agent import AnalysisError, DataAnalyst
 from auth import service_auth
+from cache import CacheAnalisi, impronta_file
 from cleaning import pulisci_dataset
 from config import Settings
-from dataset import load_raw
+from dataset import DatasetNonValido, carica_dataset
 
 LlmFactory = Callable[[Settings], Any]
 
@@ -37,8 +39,10 @@ class AnalyzeRequest(BaseModel):
 
 def create_app(settings: Settings, llm_factory: LlmFactory = default_llm_factory) -> FastAPI:
     app = FastAPI(title="LogisticAI Data Agent", version="0.1.0")
-    df_raw = load_raw(settings.csv_path)
+    # Colonne e tipi controllati all'avvio: con un CSV sbagliato il servizio non parte (DatasetNonValido).
+    df_raw, validazione = carica_dataset(settings.csv_path)
     _, quality_report = pulisci_dataset(df_raw)
+    cache = CacheAnalisi(settings.cache_max_voci, settings.cache_ttl_s, impronta_dati=impronta_file(settings.csv_path))
     requires_service = service_auth(settings.internal_service_secret)
     state: dict[str, DataAnalyst] = {}
     lock = threading.Lock()
@@ -54,16 +58,24 @@ def create_app(settings: Settings, llm_factory: LlmFactory = default_llm_factory
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "righe": len(df_raw), "modello": settings.model_id}
+        return {"status": "ok", "righe": len(df_raw), "modello": settings.model_id,
+                "avvisi_dataset": len(validazione.avvisi), "cache": cache.stato()}
 
     @app.get("/data-quality")
     def data_quality(_claims: dict = Depends(requires_service)) -> dict:
-        return quality_report.as_dict()
+        return {**quality_report.as_dict(), "validazione": validazione.as_dict()}
 
     @app.post("/analyze")
     async def analyze(req: AnalyzeRequest, _claims: dict = Depends(requires_service)) -> dict:
+        chiave = cache.chiave(req.domanda, req.genera_grafico, req.regole_da_applicare)
+        salvata = cache.get(chiave)
+        if salvata is not None:
+            # Nessuna chiamata al modello (usage vuoto, costo zero); id nuovi perché gli artifact finiscono in un altro messaggio.
+            for a in salvata["artifacts"]:
+                a["id"] = str(uuid.uuid4())
+            return {**salvata, "usage": [], "dalla_cache": True}
         try:
-            return await asyncio.wait_for(
+            risposta = await asyncio.wait_for(
                 asyncio.to_thread(analyst().analyze, req.domanda, req.genera_grafico, req.regole_da_applicare),
                 timeout=settings.timeout_s,
             )
@@ -71,6 +83,9 @@ def create_app(settings: Settings, llm_factory: LlmFactory = default_llm_factory
             raise HTTPException(504, f"Analisi oltre il tempo massimo di {settings.timeout_s:g} secondi") from None
         except AnalysisError as err:
             raise HTTPException(502, str(err)) from None
+        if risposta.pop("completa"):
+            cache.put(chiave, risposta)
+        return {**risposta, "dalla_cache": False}
 
     return app
 
@@ -79,7 +94,10 @@ def _app_from_env() -> FastAPI:
     from dotenv import load_dotenv
 
     load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-    return create_app(Settings.from_env())
+    try:
+        return create_app(Settings.from_env())
+    except DatasetNonValido as err:
+        raise SystemExit(f"Data agent non avviato. {err}") from None
 
 
 def __getattr__(name: str) -> FastAPI:

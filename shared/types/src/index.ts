@@ -57,6 +57,8 @@ export interface ChatResponse {
 
 // Eventi dello stream SSE di POST /api/chat
 export type ChatStreamEvent =
+  /** Primo evento: la conversazione (anche appena creata) a cui appartiene la risposta. */
+  | { event: 'start'; data: { conversationId: string } }
   | { event: 'status'; data: { stage: 'thinking' } }
   | { event: 'tool_start'; data: { tool: ToolName; args: Record<string, unknown> } }
   | { event: 'tool_end'; data: { tool: ToolName; durationMs: number; ok: boolean } }

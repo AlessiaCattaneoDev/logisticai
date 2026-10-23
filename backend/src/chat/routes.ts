@@ -49,6 +49,8 @@ export function chatRouter(service: ChatService, requireAuth: RequestHandler, li
     res.on('close', () => {
       if (!res.writableEnded) abort.abort();
     });
+    // Subito l'id: se l'utente interrompe la prima risposta, il client resta sulla conversazione già creata.
+    sse(res, { event: 'start', data: { conversationId } });
     for await (const event of service.handle({ userId, conversationId, message: parsed.data.message, signal: abort.signal, scope: conversation.scope })) {
       if (abort.signal.aborted) break;
       sse(res, event);

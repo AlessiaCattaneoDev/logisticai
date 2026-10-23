@@ -42,7 +42,7 @@ export function ScopeChip({ scope, onRemove }: { scope: ChatScope; onRemove: () 
 function ChatView({ conversationId, requested }: { conversationId?: string; requested: ChatScope | null }) {
   const navigate = useNavigate();
   const onCreated = useCallback((id: string) => navigate(`/chat/${id}`, { replace: true }), [navigate]);
-  const { messages, scope: saved, pending, loading, notFound, send, retry, sendFeedback } = useChat(conversationId, onCreated, requested);
+  const { messages, scope: saved, pending, loading, notFound, send, stop, retry, sendFeedback } = useChat(conversationId, onCreated, requested);
   const scope = conversationId ? (saved ?? null) : requested;
   const endRef = useRef<HTMLDivElement>(null);
   const last = messages.at(-1);
@@ -78,7 +78,7 @@ function ChatView({ conversationId, requested }: { conversationId?: string; requ
         </div>
       </div>
       <div className="mx-auto w-full max-w-4xl px-4 pb-4 md:px-8">
-        <Composer disabled={pending} onSend={send} placeholder={scope ? `Fai una domanda su "${scope.label}"` : undefined} />
+        <Composer disabled={pending} onSend={send} onStop={stop} placeholder={scope ? `Fai una domanda su "${scope.label}"` : undefined} />
         <p className="mt-2 text-xs text-testo-2">
           Stai usando un assistente AI: verifica le informazioni importanti. Le conversazioni sono registrate per migliorare il servizio.
         </p>

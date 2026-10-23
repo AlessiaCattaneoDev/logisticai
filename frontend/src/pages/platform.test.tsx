@@ -6,7 +6,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { ChatStreamEvent } from '@logisticai/shared';
 import { createQueryClient, routes } from '../App';
-import { doc, sara, server, sseResponse, state } from '../test/msw';
+import { chatHandler, doc, sara, server, state } from '../test/msw';
 
 const admin = { id: 'a1', username: 'admin', role: 'ADMIN' as const };
 
@@ -165,7 +165,7 @@ describe('chat con ambito', () => {
 
   it('"Chiedi a questo documento": etichetta arancio, ambito inviato e conservato, poi rimovibile', async () => {
     let body: unknown;
-    server.use(http.post('*/api/chat', async ({ request }) => { body = await request.json(); return sseResponse(events('conv-s')); }));
+    server.use(http.post('*/api/chat', chatHandler(events('conv-s'), (b) => (body = b))));
     const router = renderAt('/chat?documento=doc-1');
     expect(await screen.findByText('Stai chiedendo a: Procedura reclami e danni')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Cosa vuoi sapere da questo documento?' })).toBeInTheDocument();

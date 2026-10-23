@@ -56,6 +56,18 @@ describe('indipendenza dal provider LLM', () => {
   });
 });
 
+describe('event loop libero', () => {
+  // Ammesse solo prima che il server accetti richieste: avvio (server.ts legge i clienti dalla KB) e script da riga di comando.
+  const STARTUP_ONLY = ['src/rag/ingest.ts', 'src/db/seed.ts'];
+
+  it('nessuna API fs sincrona nel codice che serve le richieste (bloccherebbe gli stream SSE)', () => {
+    const offenders = sourceFiles(join(ROOT, 'backend', 'src'))
+      .filter((f) => !f.includes('generated') && !STARTUP_ONLY.includes(relative(join(ROOT, 'backend'), f)))
+      .filter((f) => /\b(readFile|writeFile|appendFile|unlink|mkdir|readdir|copyFile|rm)Sync\(/.test(readFileSync(f, 'utf8')));
+    expect(offenders.map((f) => relative(ROOT, f))).toEqual([]);
+  });
+});
+
 describe('stile dei testi', () => {
   const SKIP = new Set(['node_modules', '.venv', 'generated', '.git', 'dist', '.pytest_cache', '__pycache__']);
   const EM_DASH = String.fromCharCode(0x2014);

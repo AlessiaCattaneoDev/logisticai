@@ -4,9 +4,10 @@ import type { Artifact, ChatScope, ChatStreamEvent, DataAgentDetails, Source, To
 import type { LLMProvider, LLMUsage, NeutralMessage, ToolCallRequest } from '../llm/types.js';
 import type { RetrievalResult } from '../rag/retriever.js';
 import type { AnalyzeInput, AnalyzeOutput } from '../services/dataAgentClient.js';
+import { fitJson } from './toolResult.js';
 import { TOOL_DEFINITIONS, toolArgs } from './tools.js';
 
-export type OrchestratorEvent = Exclude<ChatStreamEvent, { event: 'done' } | { event: 'error' }>;
+export type OrchestratorEvent = Exclude<ChatStreamEvent, { event: 'start' } | { event: 'done' } | { event: 'error' }>;
 
 export interface LlmCallRecord {
   component: 'orchestrator' | 'embedding' | 'data_agent';
@@ -64,7 +65,7 @@ export function scopeInstructions(scope: ChatScope): string {
     `Se la risposta non è nell'ambito, dillo e suggerisci di togliere il filtro per cercare in tutta la knowledge base e nei dati.`;
 }
 
-const MAX_TOOL_RESULT_CHARS = 12_000;
+export const MAX_TOOL_RESULT_CHARS = 12_000;
 const REFUSAL_REPLY = 'Non posso rispondere a questa richiesta. Posso aiutarti con spedizioni, SLA, procedure e analisi dei dati di Padana Logistics.';
 const MAX_ITERATIONS_NOTE = 'Ho raggiunto il numero massimo di passaggi di analisi per questa domanda: prova a renderla più specifica.';
 
@@ -157,11 +158,13 @@ export class Orchestrator {
     const started = performance.now();
     const events: OrchestratorEvent[] = [];
     const tool = call.name as ToolName;
-    const finish = (ok: boolean, content: string, summary: string, error?: string): ToolExecution => {
+    // I risultati strutturati si accorciano restando JSON valido; i testi semplici sono messaggi brevi.
+    const finish = (ok: boolean, result: string | object, summary: string, error?: string): ToolExecution => {
       const durationMs = Math.round(performance.now() - started);
       events.push({ event: 'tool_end', data: { tool, durationMs, ok } });
+      const content = typeof result === 'string' ? result : fitJson(result, MAX_TOOL_RESULT_CHARS);
       return {
-        message: { role: 'tool', toolCallId: call.id, name: call.name, content: content.slice(0, MAX_TOOL_RESULT_CHARS), isError: !ok },
+        message: { role: 'tool', toolCallId: call.id, name: call.name, content, isError: !ok },
         log: { tool, args: call.args, resultSummary: summary, durationMs, ok, ...(error ? { error } : {}) },
         events,
       };
@@ -190,8 +193,8 @@ export class Orchestrator {
           }
         }
         const content = res.trovato
-          ? JSON.stringify({ trovato: true, risultati: res.risultati.map(({ documento, sezione, cliente, testo }) => ({ documento, sezione, cliente, testo })) })
-          : JSON.stringify({ trovato: false, nota: 'Nessun documento pertinente: dillo all’utente, non inventare.' });
+          ? { trovato: true, risultati: res.risultati.map(({ documento, sezione, cliente, testo }) => ({ documento, sezione, cliente, testo })) }
+          : { trovato: false, nota: 'Nessun documento pertinente: dillo all’utente, non inventare.' };
         return finish(true, content, res.trovato ? `${res.risultati.length} estratti` : 'nessun estratto pertinente');
       }
 
@@ -216,12 +219,12 @@ export class Orchestrator {
         righeAnalizzate: res.righe_analizzate,
       };
       // All'LLM va solo il riepilogo: i dati dei grafici restano fuori dal contesto (token e affidabilità).
-      const content = JSON.stringify({
+      const content = {
         sintesi: res.sintesi,
         grafici_e_tabelle_gia_mostrati_all_utente: res.artifacts_riepilogo,
         pulizia_dati: res.pulizia,
         righe_analizzate: res.righe_analizzate,
-      });
+      };
       return finish(true, content, `${res.artifacts.length} grafici/tabelle`);
     } catch (err) {
       if (input.signal?.aborted) throw err;

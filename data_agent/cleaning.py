@@ -105,7 +105,7 @@ _FORMATS = [
 ]
 
 
-def _parse_dates(s: pd.Series) -> tuple[pd.Series, int]:
+def parse_dates(s: pd.Series) -> tuple[pd.Series, int]:
     if pd.api.types.is_datetime64_any_dtype(s):
         return s, 0
     s = _blank_to_nan(s)
@@ -126,7 +126,7 @@ def _parse_dates(s: pd.Series) -> tuple[pd.Series, int]:
     return out, converted
 
 
-def _parse_number(value) -> float:
+def parse_number(value) -> float:
     if value is None or (isinstance(value, float) and np.isnan(value)):
         return np.nan
     if isinstance(value, (int, float, np.number)):
@@ -147,7 +147,7 @@ def _parse_numbers(s: pd.Series) -> tuple[pd.Series, int]:
         return s, 0
     s = _blank_to_nan(s)
     plain = s.str.match(r"^-?\d+(\.\d+)?$", na=True)
-    return s.map(_parse_number).astype(float), int((~plain).sum())
+    return s.map(parse_number).astype(float), int((~plain).sum())
 
 
 def _parse_bool(s: pd.Series) -> pd.Series:
@@ -187,7 +187,7 @@ def pulisci_dataset(df_raw: pd.DataFrame) -> tuple[pd.DataFrame, ReportPulizia]:
 
     # Tipi
     for col in DATES:
-        df[col], n = _parse_dates(df[col])
+        df[col], n = parse_dates(df[col])
         c["date_convertite"] += n
     for col in NUMBERS:
         df[col], n = _parse_numbers(df[col])

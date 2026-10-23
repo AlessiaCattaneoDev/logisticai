@@ -81,7 +81,7 @@ describe('POST /api/chat', () => {
     expect(res.headers['content-type']).toMatch(/text\/event-stream/);
     const events = parseSse(res.text);
     const names = events.map((e) => e.event);
-    expect(names[0]).toBe('status');
+    expect(names.slice(0, 2)).toEqual(['start', 'status']);
     expect(names.filter((n) => n === 'tool_start')).toHaveLength(2);
     expect(names.indexOf('artifact')).toBeLessThan(names.indexOf('done'));
     const done = events.at(-1)!.data as ChatResponse;
@@ -91,6 +91,7 @@ describe('POST /api/chat', () => {
     expect(done.toolsUsed.map((t) => t.name)).toEqual(['cerca_knowledge_base', 'analizza_dati']);
     expect(done.dataAgent?.righeAnalizzate).toBe(11987);
     expect(done.usage.latencyMs).toBeGreaterThanOrEqual(0);
+    expect(events[0].data).toEqual({ conversationId: done.conversationId });
   });
 
   it('salva conversazione, messaggi, tool, artifact e costi', async () => {
@@ -130,6 +131,31 @@ describe('POST /api/chat', () => {
     expect(events.at(-1)).toEqual({ event: 'error', data: { message: expect.stringMatching(/errore/), retryable: true } });
     const saved = await prisma.message.findFirstOrThrow({ where: { role: 'ASSISTANT' } });
     expect(saved.status).toBe('error');
+  });
+
+  it("interruzione dell'utente: il segnale ferma l'orchestratore, nessun evento error, risposta salvata come interrotta", async () => {
+    const user = await createUser(prisma, 'sara', 'Password!2026');
+    const conv = await prisma.conversation.create({ data: { userId: user.id, title: 't' } });
+    const seen: AbortSignal[] = [];
+    const orchestrator = {
+      async *run(input: { signal?: AbortSignal }) {
+        seen.push(input.signal!);
+        yield { event: 'status' as const, data: { stage: 'thinking' as const } };
+        if (!input.signal!.aborted) await new Promise((resolve) => input.signal!.addEventListener('abort', resolve));
+        throw new Error('aborted');
+      },
+    } as unknown as Orchestrator;
+    const service = new ChatService(prisma, orchestrator, new TelemetryRecorder(prisma, 0.9));
+    const abort = new AbortController();
+    const events: string[] = [];
+    for await (const e of service.handle({ userId: user.id, conversationId: conv.id, message: 'domanda lunga', signal: abort.signal })) {
+      events.push(e.event);
+      abort.abort();
+    }
+    expect(seen[0].aborted).toBe(true);
+    expect(events).toEqual(['status']);
+    const saved = await prisma.message.findFirstOrThrow({ where: { role: 'ASSISTANT' } });
+    expect(saved).toMatchObject({ status: 'error', content: 'Risposta interrotta.' });
   });
 });
 

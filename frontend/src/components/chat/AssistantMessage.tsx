@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import type { FeedbackRating } from '@logisticai/shared';
 import type { UiMessage } from '../../chat/state';
 import { ArtifactRenderer } from '../artifacts/ArtifactRenderer';
+import { Button } from '../ui/Button';
 import { FeedbackButtons } from './FeedbackButtons';
 import { stepsFromTools, TrackingTimeline } from './TrackingTimeline';
 
@@ -36,6 +37,16 @@ export function AssistantMessage({ message, onRetry, onFeedback }: Props) {
             <Markdown remarkPlugins={[remarkGfm]}>{message.content}</Markdown>
           </div>
         )
+      )}
+      {message.stopped && (
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-testo-2">
+          <p role="status">Risposta interrotta.</p>
+          {message.question && onRetry && (
+            <Button variant="secondary" size="sm" onClick={() => onRetry(message)}>
+              <RotateCcw size={14} aria-hidden /> Riprova
+            </Button>
+          )}
+        </div>
       )}
       {message.artifacts.length > 0 && (
         <div className="mt-4 space-y-4">

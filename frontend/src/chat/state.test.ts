@@ -56,6 +56,20 @@ describe('chatReducer', () => {
     expect(chatReducer(s, { type: 'dropLastExchange' }).messages).toEqual([]);
   });
 
+  it('stop: tiene il testo arrivato, chiude i passi in corso, permette di riprovare', () => {
+    let s = chatReducer(sent(), { type: 'event', event: { event: 'tool_start', data: { tool: 'analizza_dati', args: {} } } });
+    s = chatReducer(s, { type: 'event', event: { event: 'delta', data: { text: 'Sto calcolando' } } });
+    s = chatReducer(s, { type: 'stop' });
+    expect(s.pending).toBe(false);
+    expect(s.messages[1]).toMatchObject({ content: 'Sto calcolando', streaming: false, stopped: true, retryable: true, status: 'ok', steps: [{ tool: 'analizza_dati', status: 'error' }] });
+  });
+
+  it('load durante lo stream non sovrascrive i messaggi in arrivo', () => {
+    const s = chatReducer(sent(), { type: 'load', messages: [] });
+    expect(s.messages).toHaveLength(2);
+    expect(s.pending).toBe(true);
+  });
+
   it('feedback sul messaggio giusto', () => {
     const s = chatReducer(
       { pending: false, messages: [{ id: 'm1', role: 'assistant', content: 'x', status: 'ok', createdAt: '', artifacts: [], sources: [], toolsUsed: [] }] },

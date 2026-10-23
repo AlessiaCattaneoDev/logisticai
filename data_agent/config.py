@@ -17,6 +17,8 @@ class Settings:
     llm_model: str
     timeout_s: float = 90.0
     max_iterations: int = 8
+    cache_ttl_s: float = 3600.0
+    cache_max_voci: int = 256
 
     @property
     def model_id(self) -> str:
@@ -42,4 +44,6 @@ class Settings:
             llm_model=model,
             timeout_s=float(env.get("DATA_AGENT_TIMEOUT_S") or 90),
             max_iterations=int(env.get("DATA_AGENT_MAX_ITERATIONS") or 8),
+            cache_ttl_s=float(env.get("DATA_AGENT_CACHE_TTL_S") or 3600),
+            cache_max_voci=int(env.get("DATA_AGENT_CACHE_MAX_VOCI") or 256),
         )

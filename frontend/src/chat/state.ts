@@ -10,6 +10,8 @@ export interface UiMessage extends StoredMessage {
   steps?: Step[];
   streaming?: boolean;
   retryable?: boolean;
+  /** Risposta interrotta dall'utente con "Interrompi". */
+  stopped?: boolean;
   /** Domanda che ha generato la risposta (per "Riprova"). */
   question?: string;
 }
@@ -24,6 +26,7 @@ export type ChatAction =
   | { type: 'send'; text: string; tempId: string }
   | { type: 'event'; event: ChatStreamEvent }
   | { type: 'fail'; message: string; retryable: boolean }
+  | { type: 'stop' }
   | { type: 'dropLastExchange' }
   | { type: 'feedback'; messageId: string; rating: FeedbackRating };
 
@@ -40,7 +43,8 @@ function updateStreaming(state: ChatState, fn: (m: UiMessage) => UiMessage): Cha
 export function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
     case 'load':
-      return { messages: action.messages, pending: false };
+      // Durante uno stream i messaggi locali sono la fonte di verità: un ricaricamento non li sovrascrive.
+      return state.pending ? state : { messages: action.messages, pending: false };
     case 'send': {
       const now = new Date().toISOString();
       const base = { status: 'ok' as const, createdAt: now, artifacts: [], sources: [], toolsUsed: [] };
@@ -96,6 +100,17 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         content: action.message,
         streaming: false,
         retryable: action.retryable,
+        steps: m.steps?.map((s) => (s.status === 'running' ? { ...s, status: 'error' } : s)),
+      }));
+      return { ...next, pending: false };
+    }
+    case 'stop': {
+      // Resta il testo già arrivato; i passi ancora in corso non sono stati completati.
+      const next = updateStreaming(state, (m) => ({
+        ...m,
+        streaming: false,
+        stopped: true,
+        retryable: true,
         steps: m.steps?.map((s) => (s.status === 'running' ? { ...s, status: 'error' } : s)),
       }));
       return { ...next, pending: false };

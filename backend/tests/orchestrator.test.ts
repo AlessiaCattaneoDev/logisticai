@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { FakeLLMProvider, type FakeTurn } from '../src/llm/fake';
-import { Orchestrator, type OrchestratorEvent, type OrchestratorOutcome } from '../src/orchestrator/agent';
+import { MAX_TOOL_RESULT_CHARS, Orchestrator, type OrchestratorEvent, type OrchestratorOutcome } from '../src/orchestrator/agent';
 import { buildSystemPrompt } from '../src/orchestrator/systemPrompt';
 import type { RetrievalResult } from '../src/rag/retriever';
 import { DataAgentError, type AnalyzeInput, type AnalyzeOutput } from '../src/services/dataAgentClient';
@@ -74,6 +74,20 @@ describe('Orchestrator', () => {
     expect(outcome.sources).toEqual([{ documento: 'Schede SLA per cliente', sezione: 'ModaNova' }]);
     const toolMsg = llm.requests[1].messages.find((m) => m.role === 'tool')!;
     expect(JSON.parse((toolMsg as { content: string }).content)).toMatchObject({ trovato: true, risultati: [{ sezione: 'ModaNova' }] });
+  });
+
+  it('estratti molto lunghi: il modello riceve JSON valido entro il limite, non una stringa tagliata a metà', async () => {
+    const lungo: RetrievalResult = {
+      ...kbResult,
+      risultati: Array.from({ length: 8 }, (_, i) => ({ ...kbResult.risultati[0], sezione: `Sezione ${i}`, testo: 'Penale "SLA" '.repeat(800) })),
+    };
+    const { orchestrator, llm } = setup([{ toolCalls: [{ name: 'cerca_knowledge_base', args: { query: 'penale' } }] }, { text: 'ok' }], { search: async () => lungo });
+    await drain(orchestrator.run(input));
+    const content = (llm.requests[1].messages.find((m) => m.role === 'tool') as { content: string }).content;
+    expect(content.length).toBeLessThanOrEqual(MAX_TOOL_RESULT_CHARS);
+    const parsed = JSON.parse(content);
+    expect(parsed).toMatchObject({ trovato: true, troncato: true });
+    expect(parsed.risultati).toHaveLength(8);
   });
 
   it('catena RAG -> dati: le regole trovate arrivano al data agent, gli artifact all’utente ma non al modello', async () => {

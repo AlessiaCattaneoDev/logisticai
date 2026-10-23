@@ -1,7 +1,16 @@
-import { SendHorizontal } from 'lucide-react';
+import { SendHorizontal, Square } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
+import { Button } from '../ui/Button';
 
-export function Composer({ disabled, onSend, placeholder }: { disabled: boolean; onSend: (text: string) => void; placeholder?: string }) {
+interface Props {
+  disabled: boolean;
+  onSend: (text: string) => void;
+  /** Con una risposta in corso il pulsante Invia diventa Interrompi. */
+  onStop?: () => void;
+  placeholder?: string;
+}
+
+export function Composer({ disabled, onSend, onStop, placeholder }: Props) {
   const [text, setText] = useState('');
   const submit = () => {
     if (!text.trim() || disabled) return;
@@ -33,9 +42,15 @@ export function Composer({ disabled, onSend, placeholder }: { disabled: boolean;
         placeholder={placeholder ?? 'Chiedi di un contratto, di una procedura o dei dati delle spedizioni'}
         className="flex-1 resize-none bg-transparent px-2 py-2 outline-none placeholder:text-testo-2/70"
       />
-      <button type="submit" disabled={disabled || !text.trim()} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-primario px-4 text-sm font-semibold text-testo transition-colors hover:bg-primario-scuro disabled:opacity-40">
-        <SendHorizontal size={16} aria-hidden /> Invia
-      </button>
+      {disabled && onStop ? (
+        <Button variant="secondary" onClick={onStop} className="rounded-xl">
+          <Square size={14} fill="currentColor" aria-hidden /> Interrompi
+        </Button>
+      ) : (
+        <button type="submit" disabled={disabled || !text.trim()} className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-primario px-4 text-sm font-semibold text-testo transition-colors hover:bg-primario-scuro disabled:opacity-40">
+          <SendHorizontal size={16} aria-hidden /> Invia
+        </button>
+      )}
     </form>
   );
 }

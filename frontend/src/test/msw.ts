@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import type { AuthUser, ChatStreamEvent, ConversationDetail, ConversationSummary, DocumentCategoryDto, DocumentDto, HomeData } from '@logisticai/shared';
+import type { AuthUser, ChatResponse, ChatScope, ChatStreamEvent, ConversationDetail, ConversationSummary, DocumentCategoryDto, DocumentDto, HomeData } from '@logisticai/shared';
 
 export const sara: AuthUser = { id: 'u1', username: 'sara.operatrice', role: 'OPERATOR' };
 
@@ -13,6 +13,37 @@ export function sseResponse(events: ChatStreamEvent[]) {
     },
   });
   return new HttpResponse(stream, { headers: { 'Content-Type': 'text/event-stream' } });
+}
+
+/**
+ * POST /api/chat simulato come il backend vero: a fine stream la conversazione è salvata e
+ * GET /api/conversations/:id la restituisce (il client la ricarica da lì).
+ */
+export function chatHandler(events: ChatStreamEvent[], onBody?: (body: { message: string; conversationId?: string; scope?: { type: 'document' | 'category'; id: string } }) => void) {
+  return async ({ request }: { request: Request }) => {
+    const body = (await request.json()) as Parameters<NonNullable<typeof onBody>>[0];
+    onBody?.(body);
+    const done = events.find((e) => e.event === 'done')?.data as ChatResponse | undefined;
+    if (done) saveExchange(body, done);
+    return sseResponse(events);
+  };
+}
+
+function saveExchange(body: { message: string; scope?: { type: 'document' | 'category'; id: string } }, done: ChatResponse) {
+  const id = done.conversationId;
+  const label = body.scope && (body.scope.type === 'document' ? state.documents.find((d) => d.id === body.scope!.id)?.title : categories.find((c) => c.id === body.scope!.id)?.name);
+  const scope: ChatScope | undefined = body.scope && label ? { ...body.scope, label } : undefined;
+  const existing = state.details[id] ?? { id, title: body.message.slice(0, 60), updatedAt: new Date().toISOString(), ...(scope ? { scope } : {}), messages: [] };
+  const base = { status: 'ok' as const, createdAt: new Date().toISOString() };
+  state.details[id] = {
+    ...existing,
+    messages: [
+      ...existing.messages,
+      { ...base, id: `${done.messageId}-domanda`, role: 'user', content: body.message, artifacts: [], sources: [], toolsUsed: [] },
+      { ...base, id: done.messageId, role: 'assistant', content: done.reply, artifacts: done.artifacts, sources: done.sources, toolsUsed: done.toolsUsed, ...(done.dataAgent ? { dataAgent: done.dataAgent } : {}) },
+    ],
+  };
+  if (!state.conversations.some((c) => c.id === id)) state.conversations.unshift({ id, title: existing.title, updatedAt: existing.updatedAt });
 }
 
 export const categories: DocumentCategoryDto[] = [

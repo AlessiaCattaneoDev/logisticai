@@ -1,6 +1,8 @@
 // Libreria documenti: categorie, caricamento, elaborazione in background e indicizzazione nel RAG.
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+// Solo API asincrone: file fino a 15 MB letti o scritti in modo sincrono bloccherebbero l'event loop
+// (lo stesso che serve gli stream SSE della chat).
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { AuthUser, DocumentCategoryDto, DocumentDto, DocumentKind } from '@logisticai/shared';
 import type { PrismaClient } from '../db/client.js';
@@ -45,9 +47,7 @@ type DocRow = Awaited<ReturnType<PrismaClient['document']['findFirstOrThrow']>> 
 export class DocumentService {
   private queue: Promise<void> = Promise.resolve();
 
-  constructor(private readonly deps: DocumentServiceDeps) {
-    mkdirSync(deps.uploadDir, { recursive: true });
-  }
+  constructor(private readonly deps: DocumentServiceDeps) {}
 
   private get prisma() {
     return this.deps.prisma;
@@ -154,7 +154,8 @@ export class DocumentService {
     if (duplicate) throw new DocumentError(`Questo file è già presente nella categoria come "${duplicate.title}"`, 409);
 
     const path = join(this.deps.uploadDir, `${randomUUID()}.${kind}`);
-    writeFileSync(path, input.data);
+    await mkdir(this.deps.uploadDir, { recursive: true });
+    await writeFile(path, input.data);
     const fileName = basename(input.fileName).slice(0, 200);
     const doc = await this.prisma.document.create({
       data: {
@@ -185,11 +186,7 @@ export class DocumentService {
     await this.prisma.document.delete({ where: { id } });
     // I file della knowledge base originale restano nel repository; si eliminano solo i caricamenti.
     if (doc.origin === 'upload') {
-      try {
-        unlinkSync(this.absolute(doc.storagePath));
-      } catch {
-        /* file già assente */
-      }
+      await unlink(this.absolute(doc.storagePath)).catch(() => undefined); // file già assente
     }
   }
 
@@ -214,7 +211,7 @@ export class DocumentService {
     if (!doc) return;
     await this.prisma.document.update({ where: { id }, data: { status: 'processing', errorMessage: null } });
     try {
-      const data = readFileSync(this.absolute(doc.storagePath));
+      const data = await readFile(this.absolute(doc.storagePath));
       const markdown = await extractMarkdown(doc.kind as DocumentKind, data);
       const chunks = chunkMarkdown(doc.fileName, markdown, {
         clienti: this.deps.clienti,
@@ -252,7 +249,7 @@ export class DocumentService {
     let created = 0;
     for (const [file, categoryName] of Object.entries(SEED_DOCUMENTS)) {
       const path = join(sourceDir, file);
-      const data = readFileSync(path);
+      const data = await readFile(path);
       const checksum = createHash('sha256').update(data).digest('hex');
       const category = await this.prisma.documentCategory.findUniqueOrThrow({ where: { name: categoryName } });
       const title = data.toString('utf8').split('\n').find((l) => l.startsWith('# '))?.slice(2).trim() ?? file;

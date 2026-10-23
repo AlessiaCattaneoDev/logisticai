@@ -44,7 +44,7 @@ Da un'unica chat, accessibile solo agli utenti autenticati, risponde a due tipi 
 | **Responsabile operations** | "Mostrami la percentuale di consegne puntuali per hub negli ultimi 6 mesi." | **Data agent Python** sullo storico spedizioni (CSV) |
 | **Direzione / Key account** | "ModaNova ha diritto a penali per settembre secondo il suo SLA? A quanto ammontano?" | **RAG → data agent** (regole e formula di calcolo nel contratto, numeri nei dati) |
 
-L'LLM decide da solo quale strumento usare, in che ordine e con quali parametri. Ogni risposta mostra **fonti contrattuali citate**, **grafici e tabelle interattivi** e **codice eseguito**, così ogni numero si può verificare.
+L'LLM decide da solo quale strumento usare, in che ordine e con quali parametri. Ogni risposta mostra **fonti contrattuali citate**, **grafici e tabelle interattivi** e le **operazioni di calcolo eseguite**, così ogni numero si può verificare.
 
 > **Grafici e tabelle sono componenti React**, non immagini. Il data agent non disegna nulla: restituisce una **specifica JSON** (tipo di grafico, serie, dati, soglie) che il front end visualizza con componenti standard. L'utente può passare il mouse sui valori, cambiare tipo di grafico, nascondere serie, ordinare le tabelle ed esportare in CSV. Nessuna immagine matplotlib/seaborn/plotly, in nessun punto del sistema.
 
@@ -290,7 +290,7 @@ flowchart LR
 | `backend/` | Node.js + TypeScript + Express 5 + Prisma | 3001 | Solo front end (via proxy) | Autenticazione, conversazioni, orchestrazione ReAct, RAG, costi, API admin |
 | Database | SQLite (sviluppo/consegna) → PostgreSQL (produzione) | file | Solo backend | Utenti, conversazioni, messaggi, chiamate LLM, feedback, audit |
 | `vector_db/` | ChromaDB (`chroma run`, venv Python proprio) | 8000 | Solo backend (`127.0.0.1`) | Vector store persistente in `vector_db/chroma_data/` |
-| `data_agent/` | Python + FastAPI + LangChain pandas agent | 8001 | Solo backend (`127.0.0.1` + JWT di servizio) | Pulizia dati, analisi, spec di grafici e tabelle, sintesi |
+| `data_agent/` | Python + FastAPI + LangChain (tool calling su strumenti tipizzati) | 8001 | Solo backend (`127.0.0.1` + JWT di servizio) | Pulizia dati, analisi, spec di grafici e tabelle, sintesi |
 
 ### Scelte architetturali
 
@@ -373,6 +373,7 @@ Le descrizioni dei tool sono la parte più importante del routing: devono dire c
 
 | Evento | Payload | Uso nella UI |
 |---|---|---|
+| `start` | `{ conversationId }` | Id della conversazione (anche appena creata): se l'utente interrompe la prima risposta, la domanda successiva resta nella stessa conversazione |
 | `status` | `{ stage: 'thinking' }` | "Sto ragionando…" |
 | `tool_start` | `{ tool, args }` | "📘 Consulto i contratti…" / "📊 Analizzo le spedizioni…" |
 | `tool_end` | `{ tool, durationMs, ok }` | Spunta verde sul passaggio completato |
@@ -380,6 +381,8 @@ Le descrizioni dei tool sono la parte più importante del routing: devono dire c
 | `artifact` | `ChartSpec` o `TableSpec` | Il grafico o la tabella compare appena pronto, prima del testo finale |
 | `done` | `ChatResponse` completa | Grafici, tabelle, fonti, badge, id messaggio (per il feedback) |
 | `error` | `{ message, retryable }` | Bolla d'errore + "Riprova" |
+
+Il pulsante **Interrompi** (al posto di Invia durante la risposta) annulla la fetch: il backend riceve l'abort, ferma l'orchestratore e il data agent e salva la risposta come interrotta. Nel client resta il testo già arrivato, con "Riprova". Durante lo stream l'unica fonte dei messaggi è il reducer della chat; a risposta completata la conversazione si ricarica dal server.
 
 ### 8.5 Contratto di risposta
 
@@ -507,7 +510,7 @@ Ogni adapter fa solo quattro cose:
 | `EMBEDDING_PROVIDER` / `EMBEDDING_MODEL` + `npm run ingest` | `.env` | Solo se si cambia il modello di embedding |
 | Nuovo file in `llm/adapters/` | codice | Solo per un provider mai usato prima |
 
-Il **data agent Python** è già indipendente dal provider: usa `init_chat_model("<provider>:<modello>")` di LangChain e il pandas agent in modalità `tool-calling`, compatibile con qualunque modello che supporti i tool.
+Il **data agent Python** è già indipendente dal provider: usa `init_chat_model("<provider>:<modello>")` di LangChain e un loop di tool calling su strumenti tipizzati, compatibile con qualunque modello che supporti i tool.
 
 ### 9.3 Test di conformità degli adapter
 Una suite di test unica (`llm/__tests__/conformance.test.ts`) gira su ogni adapter con gli stessi scenari:
@@ -589,7 +592,7 @@ Il data agent **non deve accettare richieste da nessun altro** oltre al backend.
 - Validazione zod di tutti gli input HTTP **e** degli argomenti dei tool generati dall'LLM.
 - Lunghezza massima del messaggio.
 - Le spec di grafici e tabelle sono **solo dati**: validate dallo schema, renderizzate da componenti React (nessun HTML o codice eseguito nel browser), con limiti di dimensione (righe e punti massimi).
-- Il pandas agent esegue codice generato: gira solo in locale, con `max_iterations` e timeout, e il CSV è in sola lettura (§12.5).
+- Il data agent **non esegue codice generato dal modello**: può solo chiamare strumenti tipizzati con argomenti validati (§12.5). Le regole lette dai documenti caricati arrivano come testo e al massimo cambiano i parametri di un calcolo.
 - Nessun segreto nel codice: `config.ts` valida il `.env` all'avvio e si ferma con un messaggio chiaro se manca qualcosa.
 
 ---
@@ -633,33 +636,39 @@ Il data agent **non deve accettare richieste da nessun altro** oltre al backend.
 | Metodo | Path | Descrizione |
 |---|---|---|
 | `POST` | `/analyze` | `{ domanda, genera_grafico, regole_da_applicare? }` → analisi + spec di grafici e tabelle + uso token |
-| `GET` | `/health` | Stato del servizio e righe caricate |
-| `GET` | `/data-quality` | Report delle anomalie trovate nel CSV grezzo |
+| `GET` | `/health` | Stato del servizio, righe caricate, avvisi di validazione e statistiche della cache |
+| `GET` | `/data-quality` | Report delle anomalie trovate nel CSV grezzo e della validazione di colonne e tipi |
 
 ### 12.2 Flusso interno
 
 ```
-domanda (+ regole) ──► pandas agent (LangChain create_pandas_dataframe_agent,
-            │           modello da init_chat_model(DATA_LLM_PROVIDER:DATA_LLM_MODEL))
-            │  nel REPL Python sono disponibili:
-            │   - df_raw                  → CSV originale
-            │   - pulisci_dataset()       → pipeline di pulizia deterministica + report
-            │   - calcola_puntualita()    → ritardo sì/no rispetto alla data prevista,
-            │                               con la lista di cause escluse come parametro
-            │   - crea_grafico(df, …)     → registra una ChartSpec (validata con pydantic)
-            │   - crea_tabella(df, …)     → registra una TableSpec (validata con pydantic)
+avvio ──► carica_dataset(): colonne e tipi attesi? ── no ──► il servizio non parte e dice perché
+            │ sì
             ▼
-         l'agente genera ed esegue codice pandas
+         pulisci_dataset() una volta (report di pulizia) + colonne derivate (anno, giorni_ritardo)
+
+domanda (+ regole) ──► cache: stessa richiesta normalizzata sullo stesso CSV? ── sì ──► risposta salvata (0 token)
+            │ no
             ▼
-         { sintesi, artifacts[], codice_eseguito[], pulizia[], righe_analizzate,
-           usage: [{ provider, model, input_tokens, output_tokens, latency_ms }] }
+         loop di tool calling (modello da init_chat_model(DATA_LLM_PROVIDER:DATA_LLM_MODEL)),
+         il modello può SOLO chiamare questi strumenti, con argomenti validati da pydantic:
+            - calcola_puntualita / calcola_tasso_danni / calcola_margine / aggrega
+                                          → filtri per valore e periodo, raggruppamenti, ordinamento: risultato R1, R2, ...
+            - verifica_sla_mensile        → penale SLA di un cliente in un mese
+            - valuta_subvettori           → esito della procedura di qualifica
+            - crea_grafico(risultato, …)  → registra una ChartSpec (validata con pydantic)
+            - crea_tabella(risultato, …)  → registra una TableSpec (validata con pydantic)
+            ▼
+         { sintesi, artifacts[], codice_eseguito[] (operazioni eseguite), pulizia[], righe_analizzate,
+           usage: [{ provider, model, input_tokens, output_tokens, latency_ms }], dalla_cache }
 ```
 
 L'uso dei token si raccoglie con il callback di LangChain sui metadati d'uso, che è indipendente dal provider.
 
-**Perché una pipeline di pulizia deterministica *più* l'agente?**
-- `cleaning.py` gestisce in modo riproducibile e testabile le anomalie note (duplicati, date, categorie, numeri, fuori range) e produce un **report**.
-- L'agente **decide** se e come usarla, e aggiunge la pulizia specifica della domanda (per esempio escludere le spedizioni "In transito" dal calcolo della puntualità, gestire gli outlier di peso). Nella sintesi spiega cosa ha pulito.
+**Perché strumenti tipizzati e non codice generato?**
+- `cleaning.py` gestisce in modo riproducibile e testabile le anomalie note (duplicati, date, categorie, numeri, fuori range) e produce un **report**, applicato sempre.
+- L'agente **decide** quale calcolo fare e con quali parametri (filtri, periodo, raggruppamenti, esclusioni, soglie), in catena e correggendosi sugli errori restituiti dagli strumenti. Nella sintesi spiega cosa è stato pulito.
+- Nella prima versione l'agente scriveva ed eseguiva codice pandas. Le "regole da applicare" però arrivano dai documenti, che chiunque può caricare: un documento con istruzioni malevole poteva far eseguire codice arbitrario nel processo del servizio. Con gli strumenti tipizzati colonne e operazioni sono elenchi chiusi, i valori dei filtri si confrontano per uguaglianza (nessuna query string, `eval` o codice) e il peggio che un testo ostile può ottenere è un calcolo diverso.
 - È il compromesso tra autonomia dell'agente (richiesta dal brief) e affidabilità (necessaria quando i numeri diventano penali da pagare).
 
 **Perché l'helper `calcola_puntualita()`?** La puntualità è il KPI su cui si calcolano le penali: non può cambiare definizione da una domanda all'altra. L'helper la rende coerente e testabile; l'agente sceglie filtri, periodo, raggruppamenti ed esclusioni.
@@ -708,7 +717,7 @@ interface TableSpec {
 type Artifact = ChartSpec | TableSpec;
 ```
 
-- **Helper nel REPL dell'agente:** `crea_grafico(df, tipo, x, serie, titolo, …)` e `crea_tabella(df, colonne, titolo, …)`. Convertono il DataFrame (date in ISO, `NaN` → `null`, numpy → tipi nativi), validano la spec con pydantic e la registrano. Se la spec non è valida, l'errore torna all'agente, che corregge e riprova.
+- **Strumenti dell'agente:** `crea_grafico(risultato, tipo, x, y, titolo, …)` e `crea_tabella(risultato, titolo, …)` partono da un risultato già calcolato (`R1`, `R2`, …). Convertono il DataFrame (date in ISO, `NaN` → `null`, numpy → tipi nativi), validano la spec con pydantic e la registrano. Se la spec non è valida, l'errore torna all'agente, che corregge e riprova.
 - **Fonte di verità:** il servizio restituisce solo le spec registrate dagli helper, senza fidarsi del testo dell'LLM.
 - **Limiti:** max 500 punti per grafico e 1.000 righe per tabella: oltre, l'helper restituisce all'agente un errore che chiede di aggregare, e l'agente riprova.
 - **Contratto condiviso:** schema zod in `shared/types` e modello pydantic in `data_agent/specs.py`, verificati dalle **stesse fixture JSON** (`shared/contracts/fixtures/`) in entrambi i linguaggi.
@@ -717,13 +726,18 @@ type Artifact = ChartSpec | TableSpec;
 Prompt finale: tradurre i numeri in **insight per un responsabile**: cosa emerge, perché è importante, cosa fare. Esempio: *"A settembre la puntualità imputabile su ModaNova è stata del 92,8%, sotto la soglia del 95%. Il 70% dei ritardi viene da HUB-VR verso il Sud con SudCargo."*
 
 ### 12.5 Rischi e mitigazioni
-- `allow_dangerous_code=True` è richiesto dal pandas agent → servizio solo su `127.0.0.1` + JWT di servizio, `max_iterations` limitato, timeout, il CSV non viene mai sovrascritto.
-- Errori di codice dell'agente → `handle_parsing_errors=True` + retry; se fallisce comunque, messaggio d'errore leggibile restituito al backend.
+- **Nessuna esecuzione di codice** (vedi §12.2): `test_boundaries.py` vieta nel servizio `allow_dangerous_code`, `langchain_experimental`, REPL Python, `eval(`, `exec(` e `.query(`. Restano servizio solo su `127.0.0.1` + JWT di servizio, `max_iterations` limitato, timeout, CSV in sola lettura.
+- Argomenti sbagliati o valori inesistenti (es. un cliente scritto male) → lo strumento restituisce all'agente un errore leggibile con i valori ammessi, e l'agente riprova.
+
+### 12.7 Validazione, cache e prestazioni
+- **Validazione all'avvio** (`dataset.py`): colonne attese e tipo di ogni colonna (date, numeri, interi, booleani) controllati con le stesse regole della pulizia. Oltre il 5% di valori non interpretabili, una colonna mancante o un file vuoto il servizio non parte e spiega cosa non va; anomalie minori diventano avvisi visibili in `/data-quality`.
+- **Cache delle risposte** (`cache.py`): in memoria, chiave = domanda e regole normalizzate (maiuscole, accenti, punteggiatura e spazi non contano) + richiesta di grafico + impronta SHA-256 del CSV. TTL e numero di voci da `.env` (`DATA_AGENT_CACHE_TTL_S`, `DATA_AGENT_CACHE_MAX_VOCI`). Una risposta dalla cache non chiama il modello (costo zero) e riceve id nuovi per gli artifact. Gli errori non si salvano.
+- **Benchmark** (`benchmark.py`, risultati in `data_agent/benchmark/RISULTATI.md`): tempo e picco di memoria di caricamento, validazione, pulizia e delle analisi più frequenti su dataset da 12 mila a ~490 mila righe, con soglie esplicite per decidere quando introdurre Parquet, DuckDB o SQLite. Esito: tutto cresce in modo lineare. A 490 mila righe (40 volte lo storico) l'analisi più lenta richiede 0,12 s e l'avvio 16 s; la prima soglia superata sarebbe l'avvio (30 s) intorno alle 900 mila righe, quindi il primo intervento sarà salvare il dataset pulito in Parquet; DuckDB serve oltre 1,2 milioni di righe circa, quando la memoria supera 1 GB.
 
 ### 12.6 Dipendenze previste
 - Base: `fastapi`, `uvicorn`, `pydantic`, `pyjwt`, `python-dotenv`.
-- Dati: `pandas`, `numpy`, `tabulate` (**nessuna** libreria grafica).
-- LangChain: `langchain`, `langchain-experimental`, più il pacchetto del provider attivo (`langchain-openai` / `langchain-anthropic` / `langchain-google-vertexai` / `langchain-mistralai`).
+- Dati: `pandas`, `numpy` (**nessuna** libreria grafica).
+- LangChain: `langchain`, più il pacchetto del provider attivo (`langchain-openai` / `langchain-anthropic` / `langchain-google-vertexai` / `langchain-mistralai`).
 - Test: `pytest`.
 
 ---
@@ -923,7 +937,10 @@ logisticai/
 │   ├── requirements.txt
 │   ├── main.py                     ← FastAPI + verifica JWT di servizio
 │   ├── auth.py
-│   ├── agent.py                    ← pandas agent (init_chat_model)
+│   ├── agent.py                    ← loop di tool calling (init_chat_model)
+│   ├── strumenti.py                ← strumenti tipizzati: calcoli, grafici e tabelle (nessun codice eseguito)
+│   ├── cache.py                    ← cache delle risposte (TTL + LRU, impronta del CSV)
+│   ├── benchmark.py                ← tempi e memoria su dataset crescenti
 │   ├── cleaning.py
 │   ├── kpi.py                      ← calcola_puntualita() e altri helper
 │   ├── specs.py                    ← modelli pydantic ChartSpec / TableSpec
@@ -1084,7 +1101,7 @@ Ogni servizio ha test automatici scritti **insieme al codice** (test-first dove 
 | **1. Regole di business** ✅ | Definire **prima** tempi di resa, SLA e penali dei 10 clienti, soglie dei vettori: sono la base comune di dati e KB | `data/business_rules.json` |
 | **2. Dati** ✅ | `generate_dataset.py` con anomalie e "storie"; 37 test verificano che le storie emergano davvero | CSV 12.240 righe |
 | **3. Knowledge base** ✅ | Scrittura dei 10 documenti `.md`, coerenti con la fase 1; build del PDF; test di coerenza con le regole | PDF + sorgenti |
-| **4. Data agent** ✅ | `cleaning.py` + `kpi.py` + test, FastAPI + JWT di servizio, pandas agent con `init_chat_model`, grafici, sintesi, uso token | `/analyze` funzionante e protetto (83 test + 3 eval) |
+| **4. Data agent** ✅ | `cleaning.py` + `kpi.py` + test, FastAPI + JWT di servizio, agente con `init_chat_model`, grafici, sintesi, uso token | `/analyze` funzionante e protetto (83 test + 3 eval) |
 | **5. Fondamenta del backend** ✅ | Express + config + Prisma (schema, seed), auth (login, JWT, ruoli, rate limit) | Login funzionante via curl |
 | **6. Livello LLM** ✅ | Interfacce `LLMProvider` / `EmbeddingProvider`, adapter OpenAI + Anthropic, test di conformità, telemetria `LlmCall` + calcolo costi | Cambio provider da `.env` |
 | **7. RAG** ✅ | Avvio Chroma, `ingest.ts`, `retriever.ts`, controllo del modello di embedding, test di retrieval sulle domande 1–4 | Collection popolata |
@@ -1122,10 +1139,17 @@ Da annotare **durante** lo sviluppo, con problema → causa → soluzione: servo
 | Data agent e front end non allineati sul formato delle spec | Schema zod + pydantic verificati dalle stesse fixture JSON (test di contratto) |
 | Le spec gonfiano il contesto dell'LLM (token e costi) | All'LLM va solo un riepilogo degli artifact; i dati vanno direttamente al front end |
 | Puntualità calcolata in modi diversi a ogni domanda | Helper deterministico `calcola_puntualita()` con test |
-| Il pandas agent genera codice che fallisce sui dati sporchi | Funzione `pulisci_dataset()` nel REPL + `handle_parsing_errors` + retry |
+| L'agente genera codice che fallisce sui dati sporchi (prima versione) | Pulizia sempre applicata e strumenti tipizzati: niente codice, errori leggibili e retry |
+| Un documento caricato può contenere istruzioni malevole per il data agent | Nessuna esecuzione di codice: solo strumenti con argomenti validati |
 | L'agente "dice" di aver fatto un grafico ma non l'ha creato | Il servizio restituisce solo le spec registrate dagli helper, senza fidarsi del testo |
 | Latenza alta delle catene RAG → dati (15–40 s) | Stati live SSE, timeout configurabile |
 | La cronologia cresce senza limiti | Finestra sugli ultimi N messaggi + troncamento dei risultati dei tool |
+| Il troncamento a 12.000 caratteri tagliava il JSON a metà (il modello riceveva un JSON non valido) | `fitJson()` accorcia prima i testi più lunghi, poi gli ultimi elementi degli array, e segnala `troncato: true`: sempre JSON valido |
+| Stato della chat con tre fonti di verità (reducer, copia locale, ref) e cache ricostruita nel client | Durante lo stream conta solo il reducer; a risposta completata la conversazione si ricarica dal server |
+| L'utente non può fermare una risposta lunga | Pulsante "Interrompi": abort della fetch, il backend riceve il segnale e salva la risposta come interrotta; l'evento SSE `start` porta subito l'id della conversazione |
+| Lettura e scrittura sincrona di file fino a 15 MB bloccavano l'event loop degli stream SSE | API asincrone di `fs/promises` in `DocumentService`; un test di architettura vieta le API sincrone nel codice che serve le richieste |
+| Domande ripetute rifanno l'analisi (tempo e costo) | Cache delle risposte nel data agent (§12.7) |
+| Un CSV con formato cambiato produrrebbe analisi sbagliate in silenzio | Validazione di colonne e tipi all'avvio (§12.7) |
 | Allucinazioni su numeri o norme | Il prompt vieta numeri e regole non provenienti dai tool; soglia di rilevanza RAG; citazione obbligatoria delle fonti |
 
 ---

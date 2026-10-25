@@ -14,7 +14,12 @@ def test_esegue_tutte_le_operazioni_e_scrive_il_report(raw_df):
     operazioni = {m.operazione for m in ris.misure}
     assert {"Caricamento CSV", "Validazione colonne e tipi", "Pulizia dati", "Puntualità mensile per cliente", "Qualifica subvettori"} <= operazioni
     assert all(m.secondi >= 0 and m.picco_mb > 0 for m in ris.misure)
+    # RSS del processo: cresce dagli import all'avvio e non cala (è un picco).
+    for rss in ris.rss_mb.values():
+        assert 0 < rss["import"] <= rss["avvio"] <= rss["analisi"]
     md = report_markdown(ris, 1)
+    assert "## Memoria effettiva del processo" in md and "repliche dello storico reale" in md
+    assert "## Come leggere questi numeri" in md and "Stima" not in md.split("## Decisione")[0]
     assert "| Operazione | 3.000 righe | 6.000 righe |" in md
     assert "## Decisione" in md and "DuckDB" in md
 

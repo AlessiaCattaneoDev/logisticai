@@ -19,6 +19,17 @@ class Settings:
     max_iterations: int = 8
     cache_ttl_s: float = 3600.0
     cache_max_voci: int = 256
+    # Parafrasi nella cache: stesso modello di embedding del backend. Senza modello resta solo la cache esatta.
+    embedding_provider: str = ""
+    embedding_model: str = ""
+    cache_parafrasi: bool = True
+    cache_soglia: float = 0.6
+
+    @property
+    def embedding_id(self) -> str | None:
+        if not (self.cache_parafrasi and self.embedding_provider and self.embedding_model):
+            return None
+        return f"{self.embedding_provider}:{self.embedding_model}"
 
     @property
     def model_id(self) -> str:
@@ -46,4 +57,8 @@ class Settings:
             max_iterations=int(env.get("DATA_AGENT_MAX_ITERATIONS") or 8),
             cache_ttl_s=float(env.get("DATA_AGENT_CACHE_TTL_S") or 3600),
             cache_max_voci=int(env.get("DATA_AGENT_CACHE_MAX_VOCI") or 256),
+            embedding_provider=env.get("EMBEDDING_PROVIDER", ""),
+            embedding_model=env.get("EMBEDDING_MODEL", ""),
+            cache_parafrasi=(env.get("DATA_AGENT_CACHE_PARAFRASI") or "1") not in {"0", "false", "no"},
+            cache_soglia=float(env.get("DATA_AGENT_CACHE_SOGLIA") or 0.6),
         )

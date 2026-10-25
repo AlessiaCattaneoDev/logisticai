@@ -16,12 +16,14 @@ from pydantic import BaseModel, Field
 
 from agent import AnalysisError, DataAnalyst
 from auth import service_auth
-from cache import CacheAnalisi, impronta_file
+from cache import CacheAnalisi, Ricerca, impronta_file
 from cleaning import pulisci_dataset
 from config import Settings
 from dataset import DatasetNonValido, carica_dataset
+from strumenti import COLONNE_FILTRO, valori_ammessi
 
 LlmFactory = Callable[[Settings], Any]
+EmbedderFactory = Callable[[Settings], Callable[[str], list[float]]]
 
 
 def default_llm_factory(settings: Settings) -> Any:
@@ -31,21 +33,39 @@ def default_llm_factory(settings: Settings) -> Any:
     return init_chat_model(settings.model_id)
 
 
+def default_embedder_factory(settings: Settings) -> Callable[[str], list[float]]:
+    from langchain.embeddings import init_embeddings
+
+    return init_embeddings(settings.embedding_id).embed_query
+
+
 class AnalyzeRequest(BaseModel):
     domanda: str = Field(min_length=1, max_length=2000)
     genera_grafico: bool = False
     regole_da_applicare: str | None = Field(default=None, max_length=4000)
 
 
-def create_app(settings: Settings, llm_factory: LlmFactory = default_llm_factory) -> FastAPI:
+def create_app(settings: Settings, llm_factory: LlmFactory = default_llm_factory,
+               embedder_factory: EmbedderFactory = default_embedder_factory) -> FastAPI:
     app = FastAPI(title="LogisticAI Data Agent", version="0.1.0")
     # Colonne e tipi controllati all'avvio: con un CSV sbagliato il servizio non parte (DatasetNonValido).
     df_raw, validazione = carica_dataset(settings.csv_path)
-    _, quality_report = pulisci_dataset(df_raw)
-    cache = CacheAnalisi(settings.cache_max_voci, settings.cache_ttl_s, impronta_dati=impronta_file(settings.csv_path))
+    pulito, quality_report = pulisci_dataset(df_raw)
     requires_service = service_auth(settings.internal_service_secret)
-    state: dict[str, DataAnalyst] = {}
+    state: dict[str, Any] = {}
     lock = threading.Lock()
+
+    def embedder(testo: str) -> list[float]:
+        with lock:  # client creato alla prima richiesta, come l'LLM
+            if "embedder" not in state:
+                state["embedder"] = embedder_factory(settings)
+        return state["embedder"](testo)
+
+    cache = CacheAnalisi(
+        settings.cache_max_voci, settings.cache_ttl_s, impronta_dati=impronta_file(settings.csv_path),
+        embedder=embedder if settings.embedding_id else None, soglia=settings.cache_soglia,
+        entita=[v for col in COLONNE_FILTRO for v in valori_ammessi(pulito, col)],
+    )
 
     def analyst() -> DataAnalyst:
         with lock:
@@ -65,15 +85,26 @@ def create_app(settings: Settings, llm_factory: LlmFactory = default_llm_factory
     def data_quality(_claims: dict = Depends(requires_service)) -> dict:
         return {**quality_report.as_dict(), "validazione": validazione.as_dict()}
 
+    def uso_embedding(ricerca: Ricerca, domanda: str) -> list[dict]:
+        if ricerca.vettore is None:
+            return []
+        # embed_query non restituisce i token: stima di ~4 caratteri per token (costo dell'ordine di 1e-7 €).
+        return [{"provider": settings.embedding_provider, "model": settings.embedding_model,
+                 "input_tokens": max(1, len(domanda) // 4), "output_tokens": 0, "latency_ms": ricerca.embedding_ms or 0}]
+
     @app.post("/analyze")
     async def analyze(req: AnalyzeRequest, _claims: dict = Depends(requires_service)) -> dict:
-        chiave = cache.chiave(req.domanda, req.genera_grafico, req.regole_da_applicare)
-        salvata = cache.get(chiave)
-        if salvata is not None:
-            # Nessuna chiamata al modello (usage vuoto, costo zero); id nuovi perché gli artifact finiscono in un altro messaggio.
+        ricerca = await asyncio.to_thread(cache.cerca, req.domanda, req.genera_grafico, req.regole_da_applicare)
+        embedding = uso_embedding(ricerca, req.domanda)
+        if ricerca.valore is not None:
+            # Nessuna analisi (al massimo l'embedding della domanda); id nuovi perché gli artifact finiscono in un altro messaggio.
+            salvata = ricerca.valore
             for a in salvata["artifacts"]:
                 a["id"] = str(uuid.uuid4())
-            return {**salvata, "usage": [], "dalla_cache": True}
+            dettaglio = {"tipo": ricerca.tipo, "domanda_originale": ricerca.domanda_originale}
+            if ricerca.similarita is not None:
+                dettaglio["similarita"] = ricerca.similarita
+            return {**salvata, "usage": embedding, "dalla_cache": True, "cache": dettaglio}
         try:
             risposta = await asyncio.wait_for(
                 asyncio.to_thread(analyst().analyze, req.domanda, req.genera_grafico, req.regole_da_applicare),
@@ -84,8 +115,8 @@ def create_app(settings: Settings, llm_factory: LlmFactory = default_llm_factory
         except AnalysisError as err:
             raise HTTPException(502, str(err)) from None
         if risposta.pop("completa"):
-            cache.put(chiave, risposta)
-        return {**risposta, "dalla_cache": False}
+            cache.salva(ricerca, req.domanda, risposta)
+        return {**risposta, "usage": embedding + risposta["usage"], "dalla_cache": False}
 
     return app
 

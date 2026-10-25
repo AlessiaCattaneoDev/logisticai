@@ -74,7 +74,33 @@ def test_domanda_ripetuta_risposta_dalla_cache_senza_chiamare_il_modello():
     assert seconda["sintesi"] == prima["sintesi"]
     assert seconda["artifacts"][0]["data"] == prima["artifacts"][0]["data"]
     assert seconda["artifacts"][0]["id"] != prima["artifacts"][0]["id"]
-    assert client.get("/health").json()["cache"] == {"attiva": True, "voci": 1, "hit": 1, "miss": 1, "ttl_s": 3600}
+    assert seconda["cache"] == {"tipo": "uguale", "domanda_originale": "Margine per cliente?"}
+    assert client.get("/health").json()["cache"] == {"attiva": True, "parafrasi": False, "voci": 1, "hit_uguali": 1,
+                                                     "hit_parafrasi": 0, "miss": 1, "ttl_s": 3600, "soglia": 0.6}
+
+
+def test_parafrasi_risposta_dalla_cache_con_costo_dell_embedding():
+    llm = FakeToolChatModel(responses=MARGINE * 2)
+    embedded: list[str] = []
+
+    def factory(s):
+        assert s.embedding_id == "openai:text-embedding-3-small"
+        return lambda testo: embedded.append(testo) or [1.0, 0.0]
+
+    client = TestClient(create_app(settings(embedding_provider="openai", embedding_model="text-embedding-3-small"),
+                                   llm_factory=lambda s: llm, embedder_factory=factory))
+    prima = client.post("/analyze", headers=auth_header(), json={"domanda": "Qual è il margine per cliente nel 2026?", "genera_grafico": True}).json()
+    assert prima["dalla_cache"] is False and prima["usage"][0]["model"] == "text-embedding-3-small"
+    chiamate = len(llm.ricevuti)
+    seconda = client.post("/analyze", headers=auth_header(), json={"domanda": "Quanto guadagniamo su ogni cliente nel 2026?", "genera_grafico": True}).json()
+    assert len(llm.ricevuti) == chiamate  # nessuna nuova analisi
+    assert seconda["dalla_cache"] is True and seconda["sintesi"] == prima["sintesi"]
+    assert seconda["cache"] == {"tipo": "parafrasi", "domanda_originale": "Qual è il margine per cliente nel 2026?", "similarita": 1.0}
+    assert [u["model"] for u in seconda["usage"]] == ["text-embedding-3-small"]  # unico costo: l'embedding
+    # Stessa forma ma anno diverso: firma diversa, nuova analisi.
+    terza = client.post("/analyze", headers=auth_header(), json={"domanda": "Quanto guadagniamo su ogni cliente nel 2025?", "genera_grafico": True})
+    assert terza.json()["dalla_cache"] is False and len(llm.ricevuti) > chiamate
+    assert len(embedded) == 3
 
 
 def test_cache_disattivata_o_richiesta_diversa_richiama_il_modello():

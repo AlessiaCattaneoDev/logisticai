@@ -1,9 +1,12 @@
 """Benchmark delle analisi più frequenti su dataset di dimensioni crescenti (tempo e memoria).
 
 Serve a decidere con i numeri quando pandas in memoria non basta più e conviene introdurre DuckDB,
-SQLite o altre ottimizzazioni. Il dataset si ingrandisce replicando lo storico reale (con id
-spedizione diversi): le anomalie restano realistiche, ma clienti, vettori e mesi sono sempre gli
-stessi, quindi i risultati sono indicativi (vedi "Come leggere questi numeri" nel report).
+SQLite o altre ottimizzazioni. Il dataset si ingrandisce copiando lo storico reale (le anomalie
+restano realistiche) in due modi:
+- replicati: le copie hanno gli stessi 10 clienti, 5 vettori e 24 mesi;
+- variati: ogni copia ha clienti e vettori nuovi e un periodo successivo, così a 40 copie ci sono
+  400 clienti, 200 vettori e 80 anni di storico (raggruppamenti molto più grandi).
+Restano dati sintetici: i risultati sono indicativi (vedi "Come leggere questi numeri" nel report).
 
 Due misure di memoria: tracemalloc per singola operazione e RSS di picco del processo (la memoria
 che il sistema operativo assegna davvero), misurato per ogni dimensione in un processo nuovo che
@@ -29,7 +32,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from cleaning import pulisci_dataset
+from cleaning import DATES, pulisci_dataset
 from dataset import carica_dataset, load_raw, valida_dataset
 from kpi import calcola_puntualita, margine, tasso_danni, valuta_subvettori, verifica_sla_mensile
 from strumenti import Filtri, _aggregate, _filtra, prepara_dati
@@ -45,13 +48,26 @@ SOGLIA_AVVIO_S = 30.0      # caricamento + validazione + pulizia all'avvio del s
 SOGLIA_MEMORIA_MB = 1024   # memoria del processo (RSS di picco)
 
 
-def scala(df_raw: pd.DataFrame, fattore: int) -> pd.DataFrame:
-    """Replica lo storico `fattore` volte con id spedizione unici per copia (i duplicati originali restano tali)."""
+MODALITA = {"replicati": "Dati replicati", "variati": "Dati variati"}
+
+
+def scala(df_raw: pd.DataFrame, fattore: int, variati: bool = False) -> pd.DataFrame:
+    """Copia lo storico `fattore` volte con id spedizione unici per copia (i duplicati originali restano tali).
+
+    Con `variati` ogni copia k ha clienti nuovi ("C03 ModaNova", con le stesse varianti sporche), vettori nuovi
+    ("VLX3") e date spostate di 2k anni in tutti i formati. Gli hub restano due: un 3PL ne ha pochi.
+    """
     copie = []
     for k in range(fattore):
         copia = df_raw.copy()
         if k:
             copia["id_spedizione"] = copia["id_spedizione"] + f"-{k}"
+            if variati:
+                copia["cliente"] = f"C{k:02d} " + copia["cliente"]
+                vuoto = copia["vettore"].str.strip() == ""
+                copia["vettore"] = copia["vettore"].where(vuoto, copia["vettore"] + str(k))
+                for col in DATES:
+                    copia[col] = copia[col].str.replace(r"20\d\d", lambda m, k=k: str(int(m.group()) + 2 * k), regex=True)
         copie.append(copia)
     return pd.concat(copie, ignore_index=True)
 
@@ -70,6 +86,7 @@ class Risultati:
     misure: list[Misura] = field(default_factory=list)
     memoria_df_mb: dict[int, float] = field(default_factory=dict)
     rss_mb: dict[int, dict[str, float]] = field(default_factory=dict)
+    cardinalita: dict[int, dict[str, int]] = field(default_factory=dict)
 
     def righe(self) -> list[int]:
         return sorted({m.righe for m in self.misure})
@@ -134,15 +151,16 @@ def misura_processo(path: Path) -> dict[str, float]:
         return pool.apply(processo_servizio, (str(path),))
 
 
-def esegui(df_raw: pd.DataFrame, fattori: list[int], ripetizioni: int = 3, log: Callable[[str], None] = print) -> Risultati:
+def esegui(df_raw: pd.DataFrame, fattori: list[int], ripetizioni: int = 3, log: Callable[[str], None] = print,
+           variati: bool = False) -> Risultati:
     ris = Risultati()
     with tempfile.TemporaryDirectory() as tmp:
         for fattore in fattori:
-            grezzo = scala(df_raw, fattore)
+            grezzo = scala(df_raw, fattore, variati)
             n = len(grezzo)
             path = Path(tmp) / f"spedizioni_x{fattore}.csv"
             grezzo.to_csv(path, index=False)
-            log(f"{n:>9,} righe (x{fattore})".replace(",", "."))
+            log(f"{'variati' if variati else 'replicati'}: {n:>9,} righe (x{fattore})".replace(",", "."))
             # Avvio: una sola ripetizione oltre le 100 mila righe (sono le operazioni più lente).
             rip_avvio = ripetizioni if n <= 100_000 else 1
             avvio = {
@@ -154,6 +172,7 @@ def esegui(df_raw: pd.DataFrame, fattori: list[int], ripetizioni: int = 3, log: 
                 ris.misure.append(Misura(nome, "avvio", n, *_misura(fn, rip_avvio)))
             dati = prepara_dati(pulisci_dataset(grezzo)[0])
             ris.memoria_df_mb[n] = dati.memory_usage(deep=True).sum() / 1024 / 1024
+            ris.cardinalita[n] = {c: int(dati[c].nunique()) for c in ("cliente", "vettore", "mese_previsto")}
             for nome, fn in analisi(dati).items():
                 ris.misure.append(Misura(nome, "analisi", n, *_misura(fn, ripetizioni)))
             ris.rss_mb[n] = misura_processo(path)
@@ -168,6 +187,21 @@ def _cella(m: Misura) -> str:
     return f"{m.secondi:.3f} s / {_fmt_n(round(m.picco_mb))} MB"
 
 
+def tempo_analisi(ris: Risultati, n: int) -> float:
+    return max(m.secondi for m in ris.misure if m.righe == n and m.fase == "analisi")
+
+
+def tempo_avvio(ris: Risultati, n: int) -> float:
+    return sum(m.secondi for m in ris.misure if m.righe == n and m.fase == "avvio")
+
+
+def memoria(ris: Risultati, n: int) -> float:
+    """RSS di picco del processo se misurato (è quella che conta per il server), altrimenti tracemalloc."""
+    if n in ris.rss_mb:
+        return ris.rss_mb[n]["analisi"]
+    return max([m.picco_mb for m in ris.misure if m.righe == n] + [ris.memoria_df_mb.get(n, 0)])
+
+
 def decisione(ris: Risultati) -> list[str]:
     """Per ogni soglia: la prima dimensione misurata che la supera, altrimenti una stima lineare di quando succederà.
 
@@ -175,18 +209,14 @@ def decisione(ris: Risultati) -> list[str]:
     """
     righe = ris.righe()
     massimo = righe[-1]
-    analisi = lambda n: max(m.secondi for m in ris.misure if m.righe == n and m.fase == "analisi")  # noqa: E731
-    avvio = lambda n: sum(m.secondi for m in ris.misure if m.righe == n and m.fase == "avvio")  # noqa: E731
-    # Memoria: RSS di picco del processo se misurato (è quella che conta per il server), altrimenti tracemalloc.
-    memoria = lambda n: ris.rss_mb[n]["analisi"] if n in ris.rss_mb else max(  # noqa: E731
-        [m.picco_mb for m in ris.misure if m.righe == n] + [ris.memoria_df_mb.get(n, 0)])
     controlli = [
-        (f"la singola analisi più lenta supera {SOGLIA_ANALISI_S:g} s", analisi, SOGLIA_ANALISI_S, "s"),
-        (f"l'avvio (caricamento + validazione + pulizia) supera {SOGLIA_AVVIO_S:g} s", avvio, SOGLIA_AVVIO_S, "s"),
+        (f"la singola analisi più lenta supera {SOGLIA_ANALISI_S:g} s", tempo_analisi, SOGLIA_ANALISI_S, "s"),
+        (f"l'avvio (caricamento + validazione + pulizia) supera {SOGLIA_AVVIO_S:g} s", tempo_avvio, SOGLIA_AVVIO_S, "s"),
         (f"la memoria del processo (RSS di picco) supera {_fmt_n(SOGLIA_MEMORIA_MB)} MB", memoria, SOGLIA_MEMORIA_MB, "MB"),
     ]
     out = []
-    for descrizione, valore, soglia, unita in controlli:
+    for descrizione, misura, soglia, unita in controlli:
+        valore = lambda n, misura=misura: misura(ris, n)  # noqa: E731
         oltre = next((n for n in righe if valore(n) > soglia), None)
         if oltre is not None:
             out.append(f"- **Da {_fmt_n(oltre)} righe** {descrizione}.")
@@ -197,24 +227,17 @@ def decisione(ris: Risultati) -> list[str]:
     return out
 
 
-def report_markdown(ris: Risultati, ripetizioni: int) -> str:
+def _tabelle(ris: Risultati) -> list[str]:
     righe = ris.righe()
     header = "| Operazione | " + " | ".join(f"{_fmt_n(n)} righe" for n in righe) + " |"
     sep = "|---|" + "---:|" * len(righe)
-    out = [
-        "# Benchmark del data agent",
-        "",
-        f"Generato da `data_agent/benchmark.py` il {date.today().isoformat()} su {platform.system()} {platform.machine()}, "
-        f"Python {platform.python_version()}, pandas {pd.__version__}. I dataset più grandi sono **repliche dello storico reale** "
-        "(12.240 righe copiate N volte con id diversi), non dati nuovi: leggi \"Come leggere questi numeri\" prima delle conclusioni.",
-        f"Ogni cella: miglior tempo su {ripetizioni} esecuzioni (le operazioni di avvio oltre 100.000 righe una sola volta) / "
-        "picco di memoria allocata durante l'operazione (tracemalloc).",
-        "",
-    ]
+    out = []
+    if ris.cardinalita:
+        out += ["Clienti, vettori e mesi nei dati puliti: " + ", ".join(
+            f"{_fmt_n(n)} righe {c['cliente']} / {c['vettore']} / {c['mese_previsto']}" for n, c in sorted(ris.cardinalita.items())) + ".", ""]
     for fase, titolo in [("avvio", "Avvio del servizio"), ("analisi", "Analisi (una chiamata di strumento)")]:
-        out += [f"## {titolo}", "", header, sep]
-        nomi = list(dict.fromkeys(m.operazione for m in ris.misure if m.fase == fase))
-        for nome in nomi:
+        out += [f"### {titolo}", "", header, sep]
+        for nome in dict.fromkeys(m.operazione for m in ris.misure if m.fase == fase):
             out.append(f"| {nome} | " + " | ".join(_cella(ris.get(nome, n)) for n in righe) + " |")
         out.append("")
     out += ["Memoria del DataFrame pulito: " + ", ".join(f"{_fmt_n(n)} righe {_fmt_n(round(mb))} MB" for n, mb in sorted(ris.memoria_df_mb.items())) + ".", ""]
@@ -222,41 +245,71 @@ def report_markdown(ris: Risultati, ripetizioni: int) -> str:
         fasi = [("import", "Processo dopo gli import (Python, pandas, LangChain)"),
                 ("avvio", "Dopo l'avvio: CSV grezzo, report di pulizia, copia e dati preparati dell'agente"),
                 ("analisi", "Dopo le 7 analisi")]
-        out += ["## Memoria effettiva del processo", "",
-                "RSS di picco (memoria assegnata dal sistema operativo, compresi interprete, librerie e frammentazione), "
-                "misurato in un processo nuovo per ogni dimensione che ripete i passi di avvio del servizio. "
-                "È il valore da usare per dimensionare il server.", "", header, sep]
+        out += ["### Memoria effettiva del processo (RSS di picco)", "", header, sep]
         for chiave, nome in fasi:
             out.append(f"| {nome} | " + " | ".join(f"{_fmt_n(round(ris.rss_mb[n][chiave]))} MB" for n in righe) + " |")
         out.append("")
+    return out
+
+
+def report_markdown(modalita: dict[str, Risultati], ripetizioni: int) -> str:
+    out = [
+        "# Benchmark del data agent",
+        "",
+        f"Generato da `data_agent/benchmark.py` il {date.today().isoformat()} su {platform.system()} {platform.machine()}, "
+        f"Python {platform.python_version()}, pandas {pd.__version__}. I dataset più grandi sono costruiti dallo storico reale "
+        "(12.240 righe), non sono dati nuovi: leggi \"Come leggere questi numeri\" prima delle conclusioni.",
+        "",
+        "- **Dati replicati:** lo storico copiato N volte; stessi 10 clienti, 5 vettori e 24 mesi.",
+        "- **Dati variati:** ogni copia ha clienti e vettori nuovi e un periodo successivo (a 40 copie: 400 clienti, 200 vettori, "
+        "80 anni). I raggruppamenti diventano molto più grandi, come per un 3PL con molti clienti.",
+        "",
+        f"Ogni cella: miglior tempo su {ripetizioni} esecuzioni (le operazioni di avvio oltre 100.000 righe una sola volta) / "
+        "picco di memoria allocata durante l'operazione (tracemalloc). L'RSS è misurato in un processo nuovo che ripete i passi "
+        "di avvio del servizio: è il valore da usare per dimensionare il server.",
+        "",
+    ]
+    if len(modalita) > 1:
+        massimo = min(r.righe()[-1] for r in modalita.values())
+        out += [f"## Confronto alla dimensione più grande ({_fmt_n(massimo)} righe)", "",
+                "| Indicatore | " + " | ".join(MODALITA.get(k, k) for k in modalita) + " |", "|---|" + "---:|" * len(modalita)]
+        for nome, f, unita in [("Analisi più lenta", tempo_analisi, "s"), ("Avvio (caricamento + validazione + pulizia)", tempo_avvio, "s"),
+                               ("Memoria del processo (RSS di picco)", memoria, "MB")]:
+            out.append(f"| {nome} | " + " | ".join(f"{f(r, massimo):.2f} {unita}" for r in modalita.values()) + " |")
+        out.append("")
+    for chiave, ris in modalita.items():
+        out += [f"## {MODALITA.get(chiave, chiave)}", "", *_tabelle(ris)]
     out += [
         "## Come leggere questi numeri",
         "",
-        "- **Dati replicati.** I dataset grandi sono lo storico reale copiato più volte: stessi 10 clienti, 5 vettori e 24 mesi, "
-        "stesse anomalie in proporzione. I raggruppamenti restano quindi piccoli e i valori molto ripetuti. Con dati reali "
-        "più vari (più clienti e vettori, più anni, testi più lunghi) tempi e memoria possono essere più alti di quelli misurati qui.",
+        "- **Dati sintetici.** Anche i dati variati nascono dallo storico: stesse anomalie in proporzione, stessa distribuzione "
+        "per cliente e per mese, testi della stessa lunghezza. Cambiano il numero di clienti, vettori e mesi, cioè la dimensione "
+        "dei raggruppamenti. Dati reali possono avere altre distribuzioni (pochi clienti molto grandi, stagionalità diverse).",
         "- **Stime indicative.** Le soglie non superate sono stimate con un'estrapolazione lineare dalla dimensione più grande, "
         "su una sola macchina e senza altro carico: danno l'ordine di grandezza, non una garanzia. Prima di decidere un cambio "
         "di motore vanno rifatte sul server di produzione e, se possibile, con dati reali.",
-        "- **Due misure di memoria.** tracemalloc (tabelle sopra) conta le allocazioni Python e numpy di una singola operazione; "
-        "l'RSS conta tutta la memoria del processo. Per il dimensionamento vale l'RSS.",
+        "- **Due misure di memoria.** tracemalloc conta le allocazioni Python e numpy di una singola operazione; "
+        "l'RSS conta tutta la memoria del processo. Per il dimensionamento vale l'RSS, che tra un'esecuzione e l'altra "
+        "varia di circa il 10% (allocatore e garbage collector).",
+        "- **Cosa hanno trovato i dati variati.** I tempi cambiano poco, ma la prima esecuzione ha mostrato un errore della "
+        "pulizia: un nome era considerato \"vero\" solo sopra l'1% delle righe, quindi con molti clienti quelli piccoli non "
+        "venivano più unificati (50 copie di un cliente diventavano 60 clienti). Corretto in `cleaning.py` con un test di regressione.",
         "",
-    ]
-    out += [
         "## Decisione",
         "",
         f"Soglie: analisi singola {SOGLIA_ANALISI_S:g} s (l'agente ne fa diverse per domanda, oltre il calcolo pesa sulla risposta), "
         f"avvio {SOGLIA_AVVIO_S:g} s, memoria {_fmt_n(SOGLIA_MEMORIA_MB)} MB. Lo storico attuale ha 12.240 righe.",
         "",
-        *decisione(ris),
-        "",
+    ]
+    for chiave, ris in modalita.items():
+        out += [f"{MODALITA.get(chiave, chiave)}:", "", *decisione(ris), ""]
+    out += [
         "Cosa introdurre e quando:",
         "",
         "1. **Finché nessuna soglia è superata**: pandas in memoria resta la scelta più semplice; la cache delle risposte "
         "evita già di rifare le domande ripetute.",
-        "2. **Memoria alta** (con questi dati è la prima soglia): il servizio oggi tiene più copie del dataset (CSV grezzo "
-        "in `main.py`, copia e dati preparati nell'agente). Tenere solo i dati preparati riduce la memoria senza cambiare "
-        "motore ed è il primo intervento da fare.",
+        "2. **Memoria alta**: il servizio oggi tiene più copie del dataset (CSV grezzo in `main.py`, copia e dati preparati "
+        "nell'agente). Tenere solo i dati preparati riduce la memoria senza cambiare motore ed è il primo intervento da fare.",
         "3. **Avvio lento ma analisi veloci** (la pulizia domina): salvare il dataset pulito in Parquet e ricaricarlo "
         "all'avvio se l'impronta del CSV non è cambiata, invece di ripulirlo ogni volta.",
         "4. **Analisi oltre la soglia o memoria ancora alta**: DuckDB sul file Parquet/CSV. Esegue group by e filtri in colonna, "
@@ -275,9 +328,10 @@ def main() -> None:
     parser.add_argument("--ripetizioni", type=int, default=3)
     parser.add_argument("--output", type=Path, default=OUTPUT)
     args = parser.parse_args()
-    ris = esegui(load_raw(CSV), args.fattori, args.ripetizioni)
+    grezzo = load_raw(CSV)
+    modalita = {k: esegui(grezzo, args.fattori, args.ripetizioni, variati=(k == "variati")) for k in MODALITA}
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(report_markdown(ris, args.ripetizioni), encoding="utf-8")
+    args.output.write_text(report_markdown(modalita, args.ripetizioni), encoding="utf-8")
     print(f"Report scritto in {args.output}")
 
 

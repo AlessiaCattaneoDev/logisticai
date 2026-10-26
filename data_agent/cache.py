@@ -25,7 +25,7 @@ import threading
 import time
 import unicodedata
 from collections import OrderedDict
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -84,14 +84,15 @@ def _coseno(a: list[float], b: list[float]) -> float:
 
 class CacheAnalisi:
     def __init__(self, max_voci: int = 256, ttl_s: float = 3600, impronta_dati: str = "", *,
-                 embedder: Embedder | None = None, soglia: float = 0.6, entita: Iterable[str] = (),
+                 embedder: Embedder | None = None, soglia: float = 0.6, entita: Iterable[str] | Mapping[str, str] = (),
                  clock: Callable[[], float] = time.monotonic) -> None:
         self.max_voci = max_voci
         self.ttl_s = ttl_s
         self.impronta_dati = impronta_dati
         self.embedder = embedder
         self.soglia = soglia
-        self.entita = frozenset(normalizza(e) for e in entita)
+        mappa = dict(entita) if isinstance(entita, Mapping) else {e: e for e in entita}
+        self.entita = {normalizza(alias): normalizza(nome) for alias, nome in mappa.items()}
         self._clock = clock
         self._voci: OrderedDict[str, _Voce] = OrderedDict()
         self._lock = threading.Lock()

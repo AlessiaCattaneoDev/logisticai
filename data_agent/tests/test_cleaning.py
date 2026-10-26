@@ -105,3 +105,17 @@ def test_non_modifica_il_dataframe_originale(raw_df):
     copia = raw_df.copy()
     pulisci_dataset(raw_df)
     pd.testing.assert_frame_equal(raw_df, copia)
+
+
+def test_varianti_unificate_anche_con_molti_clienti_piccoli(raw_df):
+    """Regressione dal benchmark con dati variati: con 400 clienti nessuno supera l'1% delle righe e le
+    varianti ("CASAVIVA ARREDO", "Casaviva Arredo") restavano clienti diversi."""
+    copie = []
+    for k in range(40):
+        c = raw_df.copy()
+        c["id_spedizione"] = c["id_spedizione"] + f"-{k}"
+        c["cliente"] = f"C{k:02d} " + c["cliente"]
+        copie.append(c)
+    pulito, _ = pulisci_dataset(pd.concat(copie, ignore_index=True))
+    assert pulito["cliente"].nunique() == 400
+    assert "C07 BellaPelle Cosmetici" in set(pulito["cliente"])  # l'abbreviazione "BellaPelle" è stata riunita

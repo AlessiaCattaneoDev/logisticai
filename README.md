@@ -139,7 +139,7 @@ cd data_agent
 .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8001
 ```
 
-All'avvio il data agent controlla colonne e tipi del CSV: se il file non è valido non parte e scrive cosa non va. Le domande ripetute si rispondono dalla cache, senza chiamare il modello (`DATA_AGENT_CACHE_TTL_S`, `DATA_AGENT_CACHE_MAX_VOCI` nel `.env`). La cache riconosce anche le domande riformulate ("margine per cliente nel 2026" / "quanto guadagniamo su ogni cliente nel 2026"): la risposta si riusa solo se la firma della domanda (metrica, raggruppamento, clienti e vettori citati, mesi, numeri, più/meno) è identica e la similarità degli embedding supera la soglia, così "penali di settembre" e "penali di luglio" restano domande diverse. È in memoria: si svuota a ogni riavvio. Dettagli in `data_agent/cache.py` e `data_agent/firma.py`.
+All'avvio il data agent controlla colonne e tipi del CSV: se il file non è valido non parte e scrive cosa non va. Le domande ripetute si rispondono dalla cache, senza chiamare il modello (`DATA_AGENT_CACHE_TTL_S`, `DATA_AGENT_CACHE_MAX_VOCI` nel `.env`). La cache riconosce anche le domande riformulate ("margine per cliente nel 2026" / "quanto guadagniamo su ogni cliente nel 2026"): la risposta si riusa solo se la firma della domanda (metrica, raggruppamento, clienti e vettori citati, mesi, numeri, più/meno) è identica e la similarità degli embedding supera la soglia, così "penali di settembre" e "penali di luglio" restano domande diverse. È in memoria: si svuota a ogni riavvio. Valutata su 90 parafrasi e 99 domande simili ma con significato diverso, compreso un insieme di controllo mai usato per metterla a punto: zero risposte improprie, 88% delle parafrasi riconosciute (77% sul controllo). Report in `data_agent/benchmark/CACHE_PARAFRASI.md`, codice in `data_agent/cache.py` e `data_agent/firma.py`.
 
 ### 3. Backend
 
@@ -217,7 +217,7 @@ npm run typecheck        # controllo dei tipi TypeScript
 | Contratto delle spec di grafici e tabelle | Vitest + zod, pytest + pydantic sulle stesse fixture | 12 + 14 |
 | Backend | Vitest + Supertest, database SQLite isolato, LLM finto, file PDF/DOCX/TXT reali | 190 |
 | Frontend | Vitest + Testing Library + MSW | 62 |
-| Data agent | pytest, LLM finto, sicurezza degli strumenti, validazione, cache con parafrasi, benchmark | 173 |
+| Data agent | pytest, LLM finto, sicurezza degli strumenti, validazione, cache con parafrasi, benchmark | 318 |
 | Generatore del dataset | pytest: anomalie e storie nei dati | 37 |
 | Knowledge base | pytest: coerenza con le regole di business, PDF aggiornato | 24 |
 
@@ -228,10 +228,11 @@ cd backend && npm run eval                           # 20 domande demo sul siste
 cd data_agent && .venv/bin/python -m pytest -m eval  # 3 analisi del data agent + cache delle parafrasi con embedding reali
 ```
 
-**Benchmark delle prestazioni** (tempo e memoria su dataset da 12 mila a ~490 mila righe, nessun LLM):
+**Benchmark delle prestazioni** (tempo e memoria del processo su dataset da 12 mila a ~490 mila righe, sia replicati sia con clienti, vettori e periodi variati; nessun LLM):
 
 ```bash
 cd data_agent && .venv/bin/python benchmark.py      # scrive data_agent/benchmark/RISULTATI.md
+cd data_agent && .venv/bin/python valutazione_cache.py   # cache delle parafrasi, scrive data_agent/benchmark/CACHE_PARAFRASI.md
 ```
 
 `npm run eval` verifica per ogni domanda gli strumenti usati e il loro ordine, i numeri attesi, le fonti citate e la presenza di grafici, e salva un report in `backend/evals/results/`. Ultimo risultato sulla suite completa, con il data agent a strumenti tipizzati: **20/20**.

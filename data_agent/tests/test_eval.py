@@ -55,20 +55,22 @@ def test_vettore_con_piu_danni(analyst):
 
 
 def test_cache_parafrasi_con_embedding_reali():
-    """Le coppie di test_firma con il modello di embedding vero: parafrasi riusate, domande diverse mai."""
-    from cache import CacheAnalisi
-    from main import default_embedder_factory
-    from tests.test_firma import DIVERSE, PARAFRASI
+    """Le coppie di valutazione_cache.py con il modello di embedding vero, alla soglia del servizio.
+
+    Zero risposte improprie su entrambi gli insiemi; richiamo minimo sull'insieme di messa a punto e su quello di controllo.
+    """
+    from cleaning import pulisci_dataset
+    from dataset import load_raw
+    from main import entita_della_cache
+    from valutazione_cache import DIVERSE, DIVERSE_CONTROLLO, PARAFRASI, PARAFRASI_CONTROLLO, conteggi, valuta
 
     s = Settings.from_env()
     assert s.embedding_id, "EMBEDDING_PROVIDER / EMBEDDING_MODEL non configurati"
-    embed = default_embedder_factory(s)
-    entita = ["ModaNova", "TechPoint", "VLX", "SCG"]
-    for a, b in PARAFRASI:
-        c = CacheAnalisi(embedder=embed, soglia=s.cache_soglia, entita=entita)
-        c.salva(c.cerca(a, False, None), a, {"sintesi": a})
-        assert c.cerca(b, False, None).tipo == "parafrasi", (a, b)
-    for a, b in DIVERSE:
-        c = CacheAnalisi(embedder=embed, soglia=s.cache_soglia, entita=entita)
-        c.salva(c.cerca(a, False, None), a, {"sintesi": a})
-        assert c.cerca(b, False, None).valore is None, (a, b)
+    from langchain.embeddings import init_embeddings
+
+    batch = init_embeddings(s.embedding_id).embed_documents
+    entita = entita_della_cache(pulisci_dataset(load_raw(s.csv_path))[0])
+    for parafrasi, diverse, richiamo_minimo in [(PARAFRASI, DIVERSE, 0.9), (PARAFRASI_CONTROLLO, DIVERSE_CONTROLLO, 0.7)]:
+        riconosciute, improprie = conteggi(valuta(parafrasi, batch, entita), valuta(diverse, batch, entita), s.cache_soglia, True)
+        assert improprie == 0
+        assert riconosciute / len(parafrasi) >= richiamo_minimo

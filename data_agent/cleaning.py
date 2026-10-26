@@ -71,6 +71,28 @@ def _key(value: str) -> str:
     return re.sub(r"[^a-z0-9]", "", value.lower())
 
 
+def _somiglia(k: str, altra: str) -> bool:
+    return altra != k and (altra.startswith(k) or k.startswith(altra) or altra.endswith(k))
+
+
+def _chiavi_vere(size: pd.Series) -> list[str]:
+    """Chiavi che sono nomi veri: una chiave è una variante solo se somiglia (prefisso o suffisso) a una
+    chiave almeno 10 volte più frequente ("bellapelle" di "bellapellecosmetici").
+
+    Prima bastava superare l'1% delle righe: con molti clienti quelli piccoli scendevano sotto la soglia e le
+    loro varianti non venivano più unificate (lo ha mostrato il benchmark con dati variati).
+    """
+    ordinate = size.sort_values(ascending=False)
+    vere = []
+    for i, (k, n) in enumerate(ordinate.items()):
+        if n < 2:
+            continue
+        maggiori = ordinate.iloc[:i]
+        if not any(_somiglia(k, o) for o in maggiori[maggiori >= 10 * n].index):
+            vere.append(k)
+    return vere
+
+
 def _canonicalize(s: pd.Series, aliases: dict[str, str]) -> tuple[pd.Series, int]:
     values = s.dropna()
     if values.empty:
@@ -79,7 +101,7 @@ def _canonicalize(s: pd.Series, aliases: dict[str, str]) -> tuple[pd.Series, int
     counts = values.groupby([keys, values]).size()
     best = counts.groupby(level=0).idxmax().map(lambda t: t[1])          # chiave -> variante più frequente
     size = counts.groupby(level=0).sum()
-    canonical = best[size >= max(2, 0.01 * len(values))]                 # chiavi "vere"
+    canonical = best[_chiavi_vere(size)]
 
     def resolve(v: str) -> str:
         k = _key(v)

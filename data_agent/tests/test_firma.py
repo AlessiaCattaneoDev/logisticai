@@ -2,54 +2,52 @@ import pytest
 
 from cache import normalizza
 from firma import calcola_firma, confrontabile
+from main import entita_della_cache
+from valutazione_cache import DIVERSE, DIVERSE_CONTROLLO, PARAFRASI
 
-ENTITA = [normalizza(e) for e in ["ModaNova", "TechPoint", "VLX", "SCG", "HUB-VR", "HUB-PC", "Express 24h", "Destinatario assente", "Picco volumi hub"]]
+
+@pytest.fixture(scope="module", autouse=True)
+def _entita(cleaned):
+    global ENTITA
+    ENTITA = {normalizza(k): normalizza(v) for k, v in entita_della_cache(cleaned[0]).items()}  # come CacheAnalisi
+
+
+ENTITA: dict[str, str] = {}
 
 
 def firma(testo: str) -> frozenset[str]:
     return calcola_firma(normalizza(testo), ENTITA)
 
 
-# Coppie misurate con text-embedding-3-small (similarità tra parentesi): parafrasi da riconoscere...
-PARAFRASI = [
-    ("Qual è il margine per cliente nel 2026?", "Quanto guadagniamo su ogni cliente nel 2026?"),             # 0,75
-    ("Qual è il tasso di danni per vettore nel 2026?", "Nel 2026 quanti danni fa ogni vettore, in percentuale?"),  # 0,80
-    ("ModaNova ha diritto a penali per settembre 2026?", "A settembre 2026 dobbiamo pagare penali a ModaNova?"),  # 0,81
-    ("Quali sono i motivi di ritardo più frequenti?", "Per quali cause arrivano più spesso in ritardo le spedizioni?"),  # 0,65
-    ("Puntualità mensile per hub", "Mostrami la puntualità di ogni hub mese per mese"),                       # 0,81
-    ("Qual è il margine per cliente?", "margine di ciascun cliente"),                                          # 0,88
-]
-# ...e domande diverse che gli embedding da soli scambierebbero.
-DIVERSE = [
-    ("ModaNova ha diritto a penali per settembre 2026?", "ModaNova ha diritto a penali per luglio 2026?"),  # 0,98
-    ("ModaNova ha diritto a penali per settembre 2026?", "TechPoint ha diritto a penali per settembre 2026?"),
-    ("Quale vettore ha più danni nel 2026?", "Quale vettore ha meno danni nel 2026?"),                         # 0,94
-    ("Qual è il margine per cliente nel 2026?", "Qual è il margine per cliente nel 2025?"),                    # 0,96
-    ("Qual è il margine per cliente?", "Qual è il ricavo per cliente?"),
-    ("Puntualità mensile per hub", "Puntualità mensile per vettore"),
-    ("Tasso di danni per vettore", "Tasso di danni per cliente"),
-    ("Qual è il tasso di danni per vettore nel 2026?", "Qual è la puntualità per vettore nel 2026?"),
-    ("Top 5 clienti per volume", "Top 3 clienti per volume"),                                               # 0,93
-    ("Quali clienti rispettano lo SLA?", "Quali clienti non rispettano lo SLA?"),
-    ("Tasso danni di VeloceExpress", "Tasso danni di SudCargo"),  # nomi non presenti nei dati
-    ("Qual è il vettore migliore per puntualità?", "Qual è il vettore peggiore per puntualità?"),
-]
+# Le coppie stanno in valutazione_cache.py (stesso insieme del report benchmark/CACHE_PARAFRASI.md).
+TUTTE_LE_DIVERSE = [(a, b) for _, a, b in DIVERSE + DIVERSE_CONTROLLO]
 
 
-@pytest.mark.parametrize("a,b", PARAFRASI)
+@pytest.mark.parametrize("a,b", [(a, b) for _, a, b in PARAFRASI])
 def test_parafrasi_stessa_firma(a, b):
+    """Regressione del lessico: le parafrasi usate per metterlo a punto devono restare riconosciute."""
     assert firma(a) == firma(b)
     assert confrontabile(firma(a))
 
 
-@pytest.mark.parametrize("a,b", DIVERSE)
+@pytest.mark.parametrize("a,b", TUTTE_LE_DIVERSE)
 def test_domande_diverse_firma_diversa(a, b):
+    """Nessuna domanda diversa può avere la stessa firma: è ciò che evita le risposte improprie."""
     assert firma(a) != firma(b)
+
+
+def test_ordine_dei_raggruppamenti():
+    assert firma("Danni dei vettori per hub") != firma("Danni degli hub per vettore")
+    assert firma("Puntualità mensile per hub") == firma("Puntualità di ogni hub mese per mese")  # il tempo non conta
 
 
 def test_contenuto_della_firma():
     f = firma("Tasso di danni di VLX per hub a settembre 2026: i peggiori 3")
     assert f == {"misura:percentuale", "metrica:danni", "entita:vlx", "per:hub", "mese:9", "numero:2026", "direzione:peggio", "numero:3"}
+
+
+def test_alias_dei_clienti_dal_nome_composto():
+    assert firma("Margine di CasaViva Arredo") == firma("margine di casaviva")
 
 
 def test_entita_composte_prima_delle_parole():
@@ -60,3 +58,5 @@ def test_entita_composte_prima_delle_parole():
 
 def test_senza_metrica_non_si_cercano_parafrasi():
     assert not confrontabile(firma("come stanno andando le cose?"))
+    assert not confrontabile(firma("ModaNova"))
+    assert confrontabile(firma("Spedizioni Smarrita per vettore"))

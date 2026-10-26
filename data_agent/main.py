@@ -33,6 +33,18 @@ def default_llm_factory(settings: Settings) -> Any:
     return init_chat_model(settings.model_id)
 
 
+def entita_della_cache(pulito: Any) -> dict[str, str]:
+    """Valori dei dati citabili nelle domande (alias -> nome). I clienti dal nome composto valgono anche
+    con la sola prima parola ("CasaViva" = "CasaViva Arredo"), se non è ambigua."""
+    entita = {v: v for col in COLONNE_FILTRO for v in valori_ammessi(pulito, col)}
+    primi = [v.split()[0] for v in valori_ammessi(pulito, "cliente") if " " in v]
+    for v in valori_ammessi(pulito, "cliente"):
+        primo = v.split()[0]
+        if " " in v and len(primo) >= 5 and primi.count(primo) == 1 and primo not in entita:
+            entita[primo] = v
+    return entita
+
+
 def default_embedder_factory(settings: Settings) -> Callable[[str], list[float]]:
     from langchain.embeddings import init_embeddings
 
@@ -64,7 +76,7 @@ def create_app(settings: Settings, llm_factory: LlmFactory = default_llm_factory
     cache = CacheAnalisi(
         settings.cache_max_voci, settings.cache_ttl_s, impronta_dati=impronta_file(settings.csv_path),
         embedder=embedder if settings.embedding_id else None, soglia=settings.cache_soglia,
-        entita=[v for col in COLONNE_FILTRO for v in valori_ammessi(pulito, col)],
+        entita=entita_della_cache(pulito),
     )
 
     def analyst() -> DataAnalyst:
